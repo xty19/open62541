@@ -162,7 +162,7 @@ typedef struct {
 
 #include "ua_statuscodes.h"
 /** @brief A numeric identifier for a error or condition that is associated with a value or an operation. */
-typedef enum UA_StatusCode UA_StatusCode; // StatusCodes aren't an enum(=int) since 32 unsigned bits are needed. See also ua_statuscodes.h */
+typedef enum UA_StatusCode UA_StatusCode;
 
 /** @brief A name qualified by a namespace. */
 typedef struct {
