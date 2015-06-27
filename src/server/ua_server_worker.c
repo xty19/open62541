@@ -537,7 +537,7 @@ UA_StatusCode UA_Server_run_startup(UA_Server *server, UA_UInt16 nThreads, UA_Bo
     for(size_t i = 0; i < server->networkLayersSize; i++)
         server->networkLayers[i].start(&server->networkLayers[i], &server->logger);
 
-    UA_MemBuf_initialize(UA_MEMBUF_SIZE);
+    UA_Membuf_initialize(UA_MEMBUF_SIZE);
 
     return UA_STATUSCODE_GOOD;
 }
@@ -611,8 +611,7 @@ UA_StatusCode UA_Server_run_shutdown(UA_Server *server, UA_UInt16 nThreads){
     }
 #endif
 
-    UA_MemBuf_free();
-
+    UA_Membuf_free();
     return UA_STATUSCODE_GOOD;
 }
 

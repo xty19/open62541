@@ -5,7 +5,7 @@ char *membuf = UA_NULL;
 size_t membuf_size;
 size_t membuf_pos;
 
-UA_StatusCode UA_MemBuf_initialize(size_t bufsize) {
+UA_StatusCode UA_Membuf_initialize(size_t bufsize) {
     if(membuf != UA_NULL)
         return UA_STATUSCODE_BADINTERNALERROR; /* the global object is already in use */
     membuf = UA_malloc(bufsize);
@@ -16,12 +16,12 @@ UA_StatusCode UA_MemBuf_initialize(size_t bufsize) {
     return UA_STATUSCODE_GOOD;
 }
 
-void UA_MemBuf_free(void) {
+void UA_Membuf_free(void) {
     UA_free(membuf);
     membuf = UA_NULL;
 }
 
-void UA_MemBuf_reset(void) {
+void UA_Membuf_reset(void) {
     membuf_pos = 0;
 }
 

@@ -8,7 +8,7 @@
 #define UA_LOGLEVEL ${UA_LOGLEVEL}
 #cmakedefine UA_MULTITHREADING
 
-#define UA_MEMBUF_SIZE 1024 * 1024 * 5 /* 5 Megabyte */
+#define UA_MEMBUF_SIZE 1024 * 1024 /* 1 Megabyte */
 
 /* Function Export */
 #ifdef _WIN32

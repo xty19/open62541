@@ -62,7 +62,8 @@ void Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
     if(token.policyId.data == UA_NULL) {
         /* 1) no policy defined */
         response->responseHeader.serviceResult = UA_STATUSCODE_BADIDENTITYTOKENINVALID;
-    } else if(server->config.Login_enableAnonymous && UA_String_equalchars(&token.policyId, ANONYMOUS_POLICY)) {
+    } else if(server->config.Login_enableAnonymous &&
+              UA_String_equalchars(&token.policyId, ANONYMOUS_POLICY)) {
         /* 2) anonymous logins */
         if(foundSession->channel && foundSession->channel != channel)
             UA_SecureChannel_detachSession(foundSession->channel, foundSession);
@@ -99,8 +100,12 @@ void Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
             if(i >= server->config.Login_loginsCount)
                 response->responseHeader.serviceResult = UA_STATUSCODE_BADUSERACCESSDENIED;
         }
-    } else
+    } else {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+    }
+    UA_UserIdentityToken_deleteMembers(&token);
+    UA_UserNameIdentityToken_deleteMembers(&username_token);
+    return;
 }
 
 void Service_CloseSession(UA_Server *server, UA_Session *session, const UA_CloseSessionRequest *request,
