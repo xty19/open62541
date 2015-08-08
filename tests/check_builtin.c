@@ -727,6 +727,61 @@ START_TEST(UA_Variant_decodeWithArrayFlagSetShallSetVTAndAllocateMemoryForArray)
 }
 END_TEST
 
+START_TEST(UA_Variant_decodeSingleExtensionObjectShallSetVTAndAllocateMemory){
+    // given
+    size_t pos = 0;
+    UA_Variant dst;
+    UA_NodeId tmpNodeId;
+    UA_ByteString srcByteString;
+
+    UA_NodeId_init(&tmpNodeId);
+    tmpNodeId.identifier.numeric = 22;
+    tmpNodeId.namespaceIndex = 2;
+    tmpNodeId.identifierType = UA_NODEIDTYPE_NUMERIC;
+
+    UA_ExtensionObject tmpExtensionObject;
+    UA_ExtensionObject_init(&tmpExtensionObject);
+    UA_ByteString_newMembers(&tmpExtensionObject.body,3);
+    tmpExtensionObject.body.data[0]= 10;
+    tmpExtensionObject.body.data[1]= 20;
+    tmpExtensionObject.body.data[2]= 30;
+    tmpExtensionObject.encoding = UA_EXTENSIONOBJECT_ENCODINGMASK_BODYISBYTESTRING;
+    tmpExtensionObject.typeId = tmpNodeId;
+
+    UA_Variant tmpVariant;
+    UA_Variant_init(&tmpVariant);
+    tmpVariant.arrayDimensions = UA_NULL;
+    tmpVariant.arrayDimensionsSize = -1;
+    tmpVariant.arrayLength = -1;
+    tmpVariant.storageType = UA_VARIANT_DATA_NODELETE;
+    tmpVariant.type = &UA_TYPES[UA_TYPES_EXTENSIONOBJECT];
+    tmpVariant.data = &tmpExtensionObject;
+
+    UA_ByteString_newMembers(&srcByteString,200);
+    pos = 0;
+    UA_Variant_encodeBinary(&tmpVariant,&srcByteString,&pos);
+
+    // when
+    pos = 0;
+    UA_StatusCode retval = UA_Variant_decodeBinary(&srcByteString, &pos, &dst);
+    // then
+    ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
+    ck_assert_int_eq((uintptr_t)dst.type, (uintptr_t)&UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+    ck_assert_int_eq(dst.arrayLength, -1);
+    ck_assert_int_eq(((UA_ExtensionObject *)dst.data)->body.data[0], 10);
+    ck_assert_int_eq(((UA_ExtensionObject *)dst.data)->body.data[1], 20);
+    ck_assert_int_eq(((UA_ExtensionObject *)dst.data)->body.data[2], 30);
+    ck_assert_int_eq(((UA_ExtensionObject *)dst.data)->body.length, 3);
+
+
+    // finally
+    UA_Variant_deleteMembers(&dst);
+    UA_ByteString_deleteMembers(&srcByteString);
+    UA_ExtensionObject_deleteMembers(&tmpExtensionObject);
+
+}
+END_TEST
+
 START_TEST(UA_Variant_decodeWithOutDeleteMembersShallFailInCheckMem) {
     // given
     size_t pos = 0;
@@ -1059,7 +1114,7 @@ START_TEST(UA_Float_encodeShallWorkOnExample) {
 }
 END_TEST
 
-/*START_TEST(UA_Double_encodeShallWorkOnExample)
+START_TEST(UA_Double_encodeShallWorkOnExample)
    {
     // given
     UA_Double src;
@@ -1068,18 +1123,19 @@ END_TEST
                     };
     UA_ByteString dst = {16,data};
 
-    UA_Int32 retval, pos = 0;
+    UA_Int32 retval;
+    size_t pos = 0;
 
     // when test 1
     src = -6.5;
-    retval = UA_Double_encodeBinary(&src, &pos, &dst);
+    retval = UA_Double_encodeBinary(&src, &dst, &pos);
     // then test 1
     ck_assert_int_eq(pos, 8);
-    ck_assert_int_eq(dst.data[6], 0xD0);
+    ck_assert_int_eq(dst.data[6], 0x1A);
     ck_assert_int_eq(dst.data[7], 0xC0);
     ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
    }
-   END_TEST*/
+END_TEST
 
 START_TEST(UA_String_encodeShallWorkOnExample) {
     // given
@@ -1709,6 +1765,7 @@ static Suite *testSuite_builtin(void) {
     tcase_add_test(tc_decode, UA_NodeId_decodeTwoByteShallReadTwoBytesAndSetNamespaceToZero);
     tcase_add_test(tc_decode, UA_NodeId_decodeFourByteShallReadFourBytesAndRespectNamespace);
     tcase_add_test(tc_decode, UA_NodeId_decodeStringShallAllocateMemory);
+    tcase_add_test(tc_decode, UA_Variant_decodeSingleExtensionObjectShallSetVTAndAllocateMemory);
     tcase_add_test(tc_decode, UA_Variant_decodeWithOutArrayFlagSetShallSetVTAndAllocateMemoryForArray);
     tcase_add_test(tc_decode, UA_Variant_decodeWithArrayFlagSetShallSetVTAndAllocateMemoryForArray);
     tcase_add_test(tc_decode, UA_Variant_decodeWithOutDeleteMembersShallFailInCheckMem);
@@ -1726,7 +1783,7 @@ static Suite *testSuite_builtin(void) {
     tcase_add_test(tc_encode, UA_Int64_encodeNegativeShallEncodeLittleEndian);
     tcase_add_test(tc_encode, UA_Int64_encodeShallEncodeLittleEndian);
     tcase_add_test(tc_encode, UA_Float_encodeShallWorkOnExample);
-    //tcase_add_test(tc_encode, UA_Double_encodeShallWorkOnExample);
+    tcase_add_test(tc_encode, UA_Double_encodeShallWorkOnExample);
     tcase_add_test(tc_encode, UA_String_encodeShallWorkOnExample);
     tcase_add_test(tc_encode, UA_DataValue_encodeShallWorkOnExampleWithoutVariant);
     tcase_add_test(tc_encode, UA_DataValue_encodeShallWorkOnExampleWithVariant);

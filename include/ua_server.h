@@ -126,27 +126,46 @@ UA_StatusCode UA_EXPORT UA_Server_addReference(UA_Server *server, const UA_NodeI
 
 UA_StatusCode UA_EXPORT
 UA_Server_addVariableNode(UA_Server *server, UA_Variant *value, const UA_QualifiedName browseName, 
-                          UA_NodeId nodeId, const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId);
+                          UA_NodeId nodeId, const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
+                          UA_NodeId *createdNodeId
+                         );
 
 UA_StatusCode UA_EXPORT
 UA_Server_addObjectNode(UA_Server *server, const UA_QualifiedName browseName,
                         UA_NodeId nodeId, const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
-                        const UA_NodeId typeDefinition);
+                        const UA_NodeId typeDefinition,
+                        UA_NodeId *createdNodeId);
 
 UA_StatusCode UA_EXPORT
 UA_Server_addDataSourceVariableNode(UA_Server *server, UA_DataSource dataSource,
                                     const UA_QualifiedName browseName, UA_NodeId nodeId,
-                                    const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId);
+                                    const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
+                                    UA_NodeId *createdNodeId);
 
 UA_StatusCode UA_EXPORT
-UA_Server_AddMonodirectionalReference(UA_Server *server, UA_NodeId sourceNodeId, UA_ExpandedNodeId targetNodeId, 
-                                      UA_NodeId referenceTypeId, UA_Boolean isforward);
+UA_Server_AddMonodirectionalReference(UA_Server *server, UA_NodeId sourceNodeId,
+                                      UA_ExpandedNodeId targetNodeId, UA_NodeId referenceTypeId,
+                                      UA_Boolean isforward);
+
+
+#ifdef ENABLE_METHODCALLS
+typedef UA_StatusCode (*UA_MethodCallback)(const UA_NodeId objectId, const UA_Variant *input,
+                                           UA_Variant *output);
+    
+UA_StatusCode UA_EXPORT
+UA_Server_addMethodNode(UA_Server *server, const UA_QualifiedName browseName, UA_NodeId nodeId,
+                        const UA_ExpandedNodeId parentNodeId, const UA_NodeId referenceTypeId,
+                        UA_MethodCallback method, UA_Int32 inputArgumentsSize,
+                        const UA_Argument *inputArguments, UA_Int32 outputArgumentsSize,
+                        const UA_Argument *outputArguments,
+                        UA_NodeId *createdNodeId);
+#endif
 
 /** Jobs describe work that is executed once or repeatedly. */
 typedef struct {
     enum {
         UA_JOBTYPE_NOTHING,
-        UA_JOBTYPE_CLOSECONNECTION,
+        UA_JOBTYPE_DETACHCONNECTION,
         UA_JOBTYPE_BINARYMESSAGE,
         UA_JOBTYPE_METHODCALL,
         UA_JOBTYPE_DELAYEDMETHODCALL,
