@@ -59,6 +59,17 @@ static void UA_ExternalNamespace_deleteMembers(UA_ExternalNamespace *ens) {
     ens->externalNodeStore.destroy(ens->externalNodeStore.ensHandle);
 }
 
+static void UA_Server_deleteExternalNamespaces(UA_Server *server){
+	for(UA_UInt32 i = 0; i < server->externalNamespacesSize; i++){
+		UA_ExternalNamespace_deleteMembers(&(server->externalNamespaces[i]));
+	}
+	if(server->externalNamespacesSize > 0){
+		UA_free(server->externalNamespaces);
+		server->externalNamespaces = UA_NULL;
+		server->externalNamespacesSize = 0;
+	}
+}
+
 UA_StatusCode UA_EXPORT UA_Server_addExternalNamespace(UA_Server *server, UA_UInt16 namespaceIndex,
                                                        const UA_String *url, UA_ExternalNodeStore *nodeStore) {
 	if(nodeStore == UA_NULL)
@@ -144,8 +155,11 @@ void UA_Server_delete(UA_Server *server) {
     // Delete all internal data
     UA_ApplicationDescription_deleteMembers(&server->description);
     UA_SecureChannelManager_deleteMembers(&server->secureChannelManager);
-    UA_SessionManager_deleteMembers(&server->sessionManager);
+    UA_SessionManager_deleteMembers(&server->sessionManager, server);
     UA_NodeStore_delete(server->nodestore);
+#ifdef UA_EXTERNAL_NAMESPACES
+    UA_Server_deleteExternalNamespaces(server);
+#endif
     UA_ByteString_deleteMembers(&server->serverCertificate);
     UA_Array_delete(server->namespaces, &UA_TYPES[UA_TYPES_STRING], server->namespacesSize);
     UA_Array_delete(server->endpointDescriptions, &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION],
@@ -169,7 +183,7 @@ void UA_Server_delete(UA_Server *server) {
 /* Recurring cleanup. Removing unused and timed-out channels and sessions */
 static void UA_Server_cleanup(UA_Server *server, void *nothing) {
     UA_DateTime now = UA_DateTime_now();
-    UA_SessionManager_cleanupTimedOut(&server->sessionManager, now);
+    UA_SessionManager_cleanupTimedOut(&server->sessionManager, server, now);
     UA_SecureChannelManager_cleanupTimedOut(&server->secureChannelManager, now);
 }
 
@@ -452,7 +466,7 @@ UA_Server * UA_Server_new(UA_ServerConfig config) {
 #define HUNDRED_NANOSEC_PER_USEC 10LL
 #define HUNDRED_NANOSEC_PER_SEC (HUNDRED_NANOSEC_PER_USEC * 1000000LL)
     server->buildDate = (mktime(&ct) + UNIX_EPOCH_BIAS_SEC) * HUNDRED_NANOSEC_PER_SEC;
-
+    
     /**************/
     /* References */
     /**************/
@@ -778,7 +792,6 @@ UA_Server * UA_Server_new(UA_ServerConfig config) {
     addDataTypeNode(server, "DiagnosticInfo", UA_NS0ID_DIAGNOSTICINFO, UA_NS0ID_BASEDATATYPE);
     addDataTypeNode(server, "Enumeration", UA_NS0ID_ENUMERATION, UA_NS0ID_BASEDATATYPE);
         addDataTypeNode(server, "ServerState", UA_NS0ID_SERVERSTATE, UA_NS0ID_ENUMERATION);
-
 
    UA_ObjectNode *variabletypes = UA_ObjectNode_new();
    copyNames((UA_Node*)variabletypes, "VariableTypes");
