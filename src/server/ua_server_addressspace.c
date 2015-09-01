@@ -1423,8 +1423,8 @@ void UA_Server_addInstanceOf_instatiateChildNode(UA_Server *server,
     UA_NodeClass_delete(refClass);
   }
   
-  if (objectRootExpanded != UA_NULL)
-    UA_ExpandedNodeId_delete(objectRootExpanded);
+
+  UA_ExpandedNodeId_delete(objectRootExpanded);
   return;
 }
 
@@ -1454,8 +1454,7 @@ UA_StatusCode UA_Server_appendInstanceOfSupertype(UA_Server *server, UA_NodeId n
   UA_Server_addInstanceOf_instatiateChildNode(server, subtypeRefs, componentRefs, UA_NULL, 
                                               appendToNodeId, callback, (UA_ObjectTypeNode *) typeDefNode, 
                                               UA_FALSE, instantiatedTypes, handle);
-  if (objectRootExpanded != UA_NULL)
-    UA_ExpandedNodeId_delete(objectRootExpanded);
+  UA_ExpandedNodeId_delete(objectRootExpanded);
   return retval;
 }
 

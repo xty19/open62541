@@ -797,8 +797,13 @@ UA_StatusCode UA_EXPORT UA_Variant_setRangeCopy(UA_Variant *v, const void *dataA
         return retval;
     if((UA_Int32)count != dataArraySize)
         return UA_STATUSCODE_BADINDEXRANGEINVALID;
-
-    size_t block_count = count / block_size;
+    
+    size_t block_count;
+    if (block_size > 0)
+        block_count = count / block_size;
+    else
+	block_count = 0;
+    
     size_t elem_size = v->type->memSize;
     uintptr_t nextdst = (uintptr_t)v->data + (first_elem * elem_size);
     uintptr_t nextsrc = (uintptr_t)dataArray;
