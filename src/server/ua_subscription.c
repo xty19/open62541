@@ -73,7 +73,7 @@ void Subscription_generateKeepAlive(UA_Subscription *subscription) {
     msg->notification->sequenceNumber = subscription->sequenceNumber + 1;
     msg->notification->publishTime    = UA_DateTime_now();
     msg->notification->notificationDataSize = 0;
-    2LIST_INSERT_HEAD(&subscription->unpublishedNotifications, msg, listEntry);
+    LIST_INSERT_HEAD(&subscription->unpublishedNotifications, msg, listEntry);
     subscription->keepAliveCount.currentValue = subscription->keepAliveCount.maxValue;
 }
 
