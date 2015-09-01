@@ -132,7 +132,7 @@ is_relevant: ;
     if(node && descr->nodeClassMask != 0 && (node->nodeClass & descr->nodeClassMask) == 0) {
 #ifdef UA_EXTERNAL_NAMESPACES
     	if(*isExternal == UA_TRUE){
-    		UA_ObjectNode_delete((UA_ObjectNode*)node);
+            UA_ObjectNode_delete((UA_ObjectNode*)node);
     	} else
 #endif
     	UA_NodeStore_release(node);

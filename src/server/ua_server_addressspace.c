@@ -570,7 +570,9 @@ UA_StatusCode deleteOneWayReferenceWithSession(UA_Server *server, UA_Session *se
     return retval;
   
   // Copy all that do not target the targetNode in a new array
-  UA_ReferenceNode *newRefs = (UA_ReferenceNode*) UA_malloc(sizeof(UA_ReferenceNode) * node->referencesSize);
+  UA_ReferenceNode *newRefs = UA_NULL;
+  if (node->referencesSize > 0)
+    newRefs = (UA_ReferenceNode*) UA_malloc(sizeof(UA_ReferenceNode) * node->referencesSize);
   UA_UInt32 newRefCount = 0;
   for(int refn = 0; refn < node->referencesSize; refn++) {
     // Completely different target node:
@@ -597,10 +599,12 @@ UA_StatusCode deleteOneWayReferenceWithSession(UA_Server *server, UA_Session *se
     }
   }
   
-  // Reallocate
-  UA_ReferenceNode *tmp = UA_realloc(newRefs, sizeof(UA_ReferenceNode) * newRefCount);
-  if (!tmp) {
-    if (newRefCount > 0) 
+  // Reallocate 
+  UA_ReferenceNode *tmp = UA_NULL;
+  if (newRefCount > 0)
+    tmp = UA_realloc(newRefs, sizeof(UA_ReferenceNode) * newRefCount);
+  if (!tmp) { // Reallocation failed 
+    if (newRefCount > 0 || newRefs != UA_NULL) 
       UA_free(newRefs); //realloc with zero size is equal to free!
     UA_Server_deleteNodeCopy(server, (void *) &node);
     return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -1246,7 +1250,6 @@ static void UA_Server_addInstanceOf_inheritParentAttributes(UA_Server *server, a
     ref = typeDefNode->references[i];
     if (ref.isInverse == UA_FALSE)
       continue;
-    refTypeValid = UA_FALSE;
     arrayOfNodeIds_idInArray((*subtypeRefs), ref.referenceTypeId, refTypeValid, UA_FALSE);
     if (!refTypeValid) 
       continue;
@@ -1402,7 +1405,10 @@ void UA_Server_addInstanceOf_instatiateChildNode(UA_Server *server,
                                                         objectRoot, *objectRootExpanded, ref.referenceTypeId,
                                                         callback, UA_TRUE, instantiatedTypes, handle);
           instantiatedTypes->size = lastArrayDepth;
-          instantiatedTypes->ids = (UA_NodeId *) realloc(instantiatedTypes->ids, lastArrayDepth);
+          if (lastArrayDepth != 0)
+            instantiatedTypes->ids = (UA_NodeId *) realloc(instantiatedTypes->ids, lastArrayDepth);
+          else
+            UA_free(instantiatedTypes->ids);
           
           UA_Server_deleteNodeCopy(server, (void **) &nodeClone);
           UA_ExpandedNodeId_deleteMembers(objectRootExpanded); // since we only borrowed this, reset it

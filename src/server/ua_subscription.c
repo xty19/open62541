@@ -73,7 +73,7 @@ void Subscription_generateKeepAlive(UA_Subscription *subscription) {
     msg->notification->sequenceNumber = subscription->sequenceNumber + 1;
     msg->notification->publishTime    = UA_DateTime_now();
     msg->notification->notificationDataSize = 0;
-    LIST_INSERT_HEAD(&subscription->unpublishedNotifications, msg, listEntry);
+    2LIST_INSERT_HEAD(&subscription->unpublishedNotifications, msg, listEntry);
     subscription->keepAliveCount.currentValue = subscription->keepAliveCount.maxValue;
 }
 
@@ -102,11 +102,11 @@ void Subscription_updateNotifications(UA_Subscription *subscription) {
             monItemsEventT+=mon->queueSize.currentValue;
     }
     
-    // FIXME: This is hardcoded to 100 because it is not covered by the spec but we need to protect the server!
+    // FIXME: This is hardcoded to 10 because it is not covered by the spec but we need to protect the server!
     if(Subscription_queuedNotifications(subscription) >= 10) {
         // Remove last entry
-        LIST_FOREACH_SAFE(msg, &subscription->unpublishedNotifications, listEntry, tempmsg)
-            Subscription_deleteUnpublishedNotification(msg->notification->sequenceNumber, subscription);
+        for (tempmsg = subscription->unpublishedNotifications.lh_first; tempmsg->listEntry.le_next != UA_NULL; tempmsg = tempmsg->listEntry.le_next);
+        Subscription_deleteUnpublishedNotification(tempmsg->notification->sequenceNumber, subscription);
     }
     
     if(monItemsChangeT == 0 && monItemsEventT == 0 && monItemsStatusT == 0) {

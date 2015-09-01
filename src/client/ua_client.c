@@ -736,7 +736,7 @@ UA_StatusCode UA_Client_removeSubscription(UA_Client *client, UA_UInt32 subscrip
     
     // Problem? We do not have this subscription registeres. Maybe the server should
     // be consulted at this point?
-    if (sub == NULL)
+    if (sub == UA_NULL)
         return UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
     
     UA_DeleteSubscriptionsRequest  request;
@@ -784,7 +784,7 @@ UA_UInt32 UA_Client_monitorItemChanges(UA_Client *client, UA_UInt32 subscription
     }
     
     // Maybe the same problem as in DeleteSubscription... ask the server?
-    if (sub == NULL)
+    if (sub == UA_NULL)
         return UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
     
     UA_CreateMonitoredItemsRequest request;
@@ -845,7 +845,7 @@ UA_StatusCode UA_Client_unMonitorItemChanges(UA_Client *client, UA_UInt32 subscr
             break;
     }
     // Maybe the same problem as in DeleteSubscription... ask the server?
-    if (sub == NULL)
+    if (sub == UA_NULL)
         return UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
     
     UA_Client_MonitoredItem *mon, *tmpmon;
@@ -899,7 +899,7 @@ UA_Boolean UA_Client_processPublishRx(UA_Client *client, UA_PublishResponse resp
     // during keepalives or no data availability
     UA_Client_NotificationsAckNumber *tmpAck = client->pendingNotificationsAcks.lh_first;
     UA_Client_NotificationsAckNumber *nxtAck = tmpAck;
-    for(int i=0; i<response.resultsSize && nxtAck != NULL; i++) {
+    for(int i=0; i<response.resultsSize && nxtAck != UA_NULL; i++) {
         tmpAck = nxtAck;
         nxtAck = tmpAck->listEntry.le_next;
         if (response.results[i] == UA_STATUSCODE_GOOD) {
@@ -915,7 +915,7 @@ UA_Boolean UA_Client_processPublishRx(UA_Client *client, UA_PublishResponse resp
         if (sub->SubscriptionID == response.subscriptionId)
             break;
     }
-    if (sub == NULL)
+    if (sub == UA_NULL)
         return UA_FALSE;
     
     UA_NotificationMessage msg = response.notificationMessage;
@@ -956,8 +956,8 @@ UA_Boolean UA_Client_processPublishRx(UA_Client *client, UA_PublishResponse resp
             tmpAck->subAck.subscriptionId == response.subscriptionId)
             break;
     }
-    if (tmpAck == NULL ){
-        tmpAck = (UA_Client_NotificationsAckNumber *) malloc(sizeof(UA_Client_NotificationsAckNumber));
+    if (tmpAck == UA_NULL ){
+        tmpAck = (UA_Client_NotificationsAckNumber *) UA_malloc(sizeof(UA_Client_NotificationsAckNumber));
         tmpAck->subAck.sequenceNumber = msg.sequenceNumber;
         tmpAck->subAck.subscriptionId = sub->SubscriptionID;
         LIST_INSERT_HEAD(&(client->pendingNotificationsAcks), tmpAck, listEntry);
@@ -981,7 +981,8 @@ void UA_Client_doPublish(UA_Client *client) {
         LIST_FOREACH(ack, &(client->pendingNotificationsAcks), listEntry) {
             request.subscriptionAcknowledgementsSize++;
         }
-        request.subscriptionAcknowledgements = (UA_SubscriptionAcknowledgement *) UA_malloc(sizeof(UA_SubscriptionAcknowledgement)*request.subscriptionAcknowledgementsSize);
+        if (request.subscriptionAcknowledgementsSize > 0)
+          request.subscriptionAcknowledgements = (UA_SubscriptionAcknowledgement *) UA_malloc(sizeof(UA_SubscriptionAcknowledgement)*request.subscriptionAcknowledgementsSize);
         
         index = 0;
         LIST_FOREACH(ack, &(client->pendingNotificationsAcks), listEntry) {
@@ -1154,7 +1155,7 @@ UA_StatusCode UA_Client_addObjectNode(UA_Client *client, UA_NodeId reqId, UA_Qua
     if(adRes->responseHeader.serviceResult != UA_STATUSCODE_GOOD || adRes->resultsSize == 0)
       retval = adRes->responseHeader.serviceResult;
     retval |= adRes->results[0].statusCode;
-    if(createdNodeId != NULL)
+    if(createdNodeId != UA_NULL)
       UA_NodeId_copy(&adRes->results[0].addedNodeId, createdNodeId);
     UA_AddNodesResponse_delete(adRes);
     return retval;
@@ -1192,14 +1193,14 @@ UA_StatusCode UA_Client_addVariableNode(UA_Client *client, UA_NodeId reqId, UA_Q
     vAtt.historizing              = UA_FALSE;
     vAtt.specifiedAttributes |= UA_NODEATTRIBUTESMASK_HISTORIZING;
     
-    if (value != NULL) {
+    if (value != UA_NULL) {
         UA_Variant_copy(value, &(vAtt.value));
         vAtt.specifiedAttributes |= UA_NODEATTRIBUTESMASK_VALUE;
         vAtt.valueRank            = -2;
         vAtt.specifiedAttributes |= UA_NODEATTRIBUTESMASK_VALUERANK;
         // These are defined by the variant
         //vAtt.arrayDimensionsSize  = value->arrayDimensionsSize;
-        //vAtt.arrayDimensions      = NULL;
+        //vAtt.arrayDimensions      = UA_NULL;
         UA_NodeId_copy(&value->type->typeId, &(vAtt.dataType));
     }
     
@@ -1208,7 +1209,7 @@ UA_StatusCode UA_Client_addVariableNode(UA_Client *client, UA_NodeId reqId, UA_Q
     if(adRes->responseHeader.serviceResult != UA_STATUSCODE_GOOD || adRes->resultsSize == 0)
       retval = adRes->responseHeader.serviceResult;
     retval |= adRes->results[0].statusCode;
-    if(createdNodeId != NULL)
+    if(createdNodeId != UA_NULL)
       UA_NodeId_copy(&adRes->results[0].addedNodeId, createdNodeId);
     UA_AddNodesResponse_delete(adRes);
     return retval;
@@ -1247,7 +1248,7 @@ UA_StatusCode UA_Client_addReferenceTypeNode( UA_Client *client, UA_NodeId reqId
     if(adRes->responseHeader.serviceResult != UA_STATUSCODE_GOOD || adRes->resultsSize == 0)
       retval = adRes->responseHeader.serviceResult;
     retval |= adRes->results[0].statusCode;
-    if(createdNodeId != NULL)
+    if(createdNodeId != UA_NULL)
       UA_NodeId_copy(&adRes->results[0].addedNodeId, createdNodeId);
     UA_AddNodesResponse_delete(adRes);
     return retval;
@@ -1283,7 +1284,7 @@ UA_StatusCode UA_Client_addObjectTypeNode(UA_Client *client, UA_NodeId reqId, UA
     if(adRes->responseHeader.serviceResult != UA_STATUSCODE_GOOD || adRes->resultsSize == 0)
       retval = adRes->responseHeader.serviceResult;
     retval |= adRes->results[0].statusCode;
-    if(createdNodeId != NULL)
+    if(createdNodeId != UA_NULL)
       UA_NodeId_copy(&adRes->results[0].addedNodeId, createdNodeId);
     UA_AddNodesResponse_delete(adRes);
     return retval;
@@ -1433,7 +1434,7 @@ UA_Client_appendObjectNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Byte_copy((UA_Byte *) rrs.results[0].value.data, &target->eventNotifier);
   
   UA_ReadResponse_deleteMembers(&rrs);
@@ -1466,7 +1467,7 @@ UA_Client_appendObjectTypeNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[0].value.data, &target->isAbstract);
   
   UA_ReadResponse_deleteMembers(&rrs);
@@ -1508,17 +1509,17 @@ UA_Client_appendVariableNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
 
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Variant_copy((UA_Variant *) &rrs.results[0].value, &target->value.variant);
-  if (rrs.results[3].value.data != NULL)
+  if (rrs.results[3].value.data != UA_NULL)
     UA_Int32_copy((UA_Int32 *) rrs.results[3].value.data, &target->valueRank);
-  if (rrs.results[4].value.data != NULL)
+  if (rrs.results[4].value.data != UA_NULL)
     UA_Byte_copy((UA_Byte *) rrs.results[4].value.data, &target->accessLevel);
-  if (rrs.results[5].value.data != NULL)
+  if (rrs.results[5].value.data != UA_NULL)
     UA_Byte_copy((UA_Byte *) rrs.results[5].value.data, &target->userAccessLevel);
-  if (rrs.results[6].value.data != NULL)
+  if (rrs.results[6].value.data != UA_NULL)
     UA_Double_copy((UA_Double *) rrs.results[6].value.data, &target->minimumSamplingInterval);
-  if (rrs.results[7].value.data != NULL)
+  if (rrs.results[7].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[7].value.data, &target->historizing);
   
   UA_ReadResponse_deleteMembers(&rrs);
@@ -1559,11 +1560,11 @@ UA_Client_appendVariableTypeNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[0].value.data, &target->isAbstract);
-  if (rrs.results[1].value.data != NULL)
+  if (rrs.results[1].value.data != UA_NULL)
     UA_Variant_copy((UA_Variant *) &rrs.results[1].value, &target->value.variant);
-  if (rrs.results[2].value.data != NULL)
+  if (rrs.results[2].value.data != UA_NULL)
     UA_Int32_copy((UA_Int32 *) rrs.results[2].value.data, &target->valueRank);
   
   
@@ -1599,11 +1600,11 @@ UA_Client_appendReferenceTypeNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[0].value.data, &target->isAbstract);
-  if (rrs.results[1].value.data != NULL)
+  if (rrs.results[1].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[1].value.data, &target->symmetric);
-  if (rrs.results[2].value.data != NULL)
+  if (rrs.results[2].value.data != UA_NULL)
     UA_LocalizedText_copy((UA_LocalizedText *) rrs.results[2].value.data, &target->inverseName);
   
   UA_ReadResponse_deleteMembers(&rrs);
@@ -1637,9 +1638,9 @@ UA_Client_appendViewNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[0].value.data, &target->containsNoLoops);
-  if (rrs.results[1].value.data != NULL)
+  if (rrs.results[1].value.data != UA_NULL)
     UA_Byte_copy((UA_Byte *) rrs.results[1].value.data, &target->eventNotifier);
   
   UA_ReadResponse_deleteMembers(&rrs);
@@ -1672,7 +1673,7 @@ UA_Client_appendDataTypeNodeAttributes(UA_Client *client, void *dst) {
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[0].value.data, &target->isAbstract);
   
   UA_ReadResponse_deleteMembers(&rrs);
@@ -1706,9 +1707,9 @@ UA_StatusCode UA_Client_appendMethodNodeAttributes(UA_Client *client, void *dst)
   if (!(retval == UA_STATUSCODE_GOOD))
     return retval;
   
-  if (rrs.results[0].value.data != NULL)
+  if (rrs.results[0].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[0].value.data, &target->executable);
-  if (rrs.results[1].value.data != NULL)
+  if (rrs.results[1].value.data != UA_NULL)
     UA_Boolean_copy((UA_Boolean *) rrs.results[1].value.data, &target->userExecutable);
   
   UA_ReadResponse_deleteMembers(&rrs);
