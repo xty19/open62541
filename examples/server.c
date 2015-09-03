@@ -221,11 +221,22 @@ int main(int argc, char** argv) {
   UA_Server_addNetworkLayer(server, ServerNetworkLayerTCP_new(UA_ConnectionConfig_standard, 16664));
 
   // add node with the datetime data source
+  UA_NodeId nodeId_currentTime;
   UA_DataSource dateDataSource = (UA_DataSource) {.handle = NULL, .read = readTimeData, .write = NULL};
   const UA_QualifiedName dateName = UA_QUALIFIEDNAME(1, "current time");
   UA_Server_addDataSourceVariableNode(server, dateDataSource, dateName, UA_NODEID_NULL,
-                                  UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES), NULL);
+                                      UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES), &nodeId_currentTime);
 
+  // Get and reattach the datasource
+  UA_DataSource *dataSourceCopy;
+  UA_Server_getAttribute_DataSource(server, nodeId_currentTime, &dataSourceCopy);
+  if (dataSourceCopy == NULL)
+    UA_LOG_WARNING(logger, UA_LOGCATEGORY_USERLAND, "The returned dataSource is invalid");
+  else if (dataSourceCopy->read != dateDataSource.read)
+    UA_LOG_WARNING(logger, UA_LOGCATEGORY_USERLAND, "The returned dataSource is not the same as we set?");
+  else
+    UA_Server_setAttribute_DataSource(server, nodeId_currentTime, dataSourceCopy);
+  
 #ifndef _WIN32
   //cpu temperature monitoring for linux machines
   if((temperatureFile = fopen("/sys/class/thermal/thermal_zone0/temp", "r"))) {
@@ -355,6 +366,12 @@ int main(int argc, char** argv) {
                           &getMonitoredItems, // Call this method
                           (void *) server,    // Pass our server pointer as a handle to the method
                           1, &inputArguments, 1, &outputArguments, &methodId);
+  
+  // Dettach the method from the methodNode
+  UA_Server_attachMethod_toNode(server, UA_NODEID_NUMERIC(1,62541), NULL, NULL);
+  
+  // Reaettach the method from the methodNode
+  UA_Server_attachMethod_toNode(server, UA_NODEID_NUMERIC(1,62541), &getMonitoredItems, (void *) server);
 #endif
    
   // Example for iterating over all nodes referenced by "Objects":
@@ -363,7 +380,7 @@ int main(int argc, char** argv) {
   
   // Some easy localization
   UA_LocalizedText objectsName = UA_LOCALIZEDTEXT("de_DE", "Objekte");
-  UA_Server_setAttributeValue(server, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_ATTRIBUTEID_DISPLAYNAME, (void *) &objectsName);
+  UA_Server_setAttribute_displayName(server, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), &objectsName);
   
   //start server
   UA_StatusCode retval = UA_Server_run(server, 1, &running); //blocks until running=false
