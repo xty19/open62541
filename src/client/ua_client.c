@@ -40,7 +40,7 @@ struct UA_Client {
 };
 
 const UA_EXPORT UA_ClientConfig UA_ClientConfig_standard =
-    { 5 /* ms receive timout */, 30000, 2000,
+    { .timeout = 5 /* ms receive timout */, .secureChannelLifeTime = 30000, .timeToRenewSecureChannel = 2000,
       {.protocolVersion = 0, .sendBufferSize = 65536, .recvBufferSize  = 65536,
        .maxMessageSize = 65536, .maxChunkCount = 1}};
 
@@ -156,6 +156,11 @@ static UA_StatusCode HelAckHandshake(UA_Client *c) {
 }
 
 static UA_StatusCode SecureChannelHandshake(UA_Client *client, UA_Boolean renew) {
+    /* Check if sc is still valid */
+    if(renew && client->scExpiresAt - UA_DateTime_now() > client->config.timeToRenewSecureChannel * 10000 ){
+        return UA_STATUSCODE_GOOD;
+    }
+
     UA_SecureConversationMessageHeader messageHeader;
     messageHeader.messageHeader.messageTypeAndFinal = UA_MESSAGETYPEANDFINAL_OPNF;
     messageHeader.secureChannelId = 0;
@@ -260,9 +265,18 @@ static UA_StatusCode SecureChannelHandshake(UA_Client *client, UA_Boolean renew)
     response) and filled with the appropriate error code */
 static void synchronousRequest(UA_Client *client, void *request, const UA_DataType *requestType,
                                void *response, const UA_DataType *responseType) {
-    /* Check if sc needs to be renewed */
-    if(client->scExpiresAt - UA_DateTime_now() <= client->config.timeToRenewSecureChannel * 10000 )
-        UA_Client_renewSecureChannel(client);
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    if(!response)
+        return;
+    UA_init(response, responseType);
+    UA_ResponseHeader *respHeader = (UA_ResponseHeader*)response;
+    //make sure we have a valid session
+    retval = UA_Client_renewSecureChannel(client);
+    if(retval != UA_STATUSCODE_GOOD) {
+        respHeader->serviceResult = retval;
+        client->state = UA_CLIENTSTATE_ERRORED;
+        return;
+    }
 
     /* Copy authenticationToken token to request header */
     typedef struct {
@@ -271,15 +285,10 @@ static void synchronousRequest(UA_Client *client, void *request, const UA_DataTy
     /* The cast is valid, since all requests start with a requestHeader */
     UA_NodeId_copy(&client->authenticationToken, &((headerOnlyRequest*)request)->requestHeader.authenticationToken);
 
-    if(!response)
-        return;
-    UA_init(response, responseType);
-
     /* Send the request */
     UA_UInt32 requestId = ++client->requestId;
-    UA_StatusCode retval = UA_SecureChannel_sendBinaryMessage(&client->channel, requestId,
+    retval = UA_SecureChannel_sendBinaryMessage(&client->channel, requestId,
                                                               request, requestType);
-    UA_ResponseHeader *respHeader = (UA_ResponseHeader*)response;
     if(retval) {
         if(retval == UA_STATUSCODE_BADENCODINGLIMITSEXCEEDED)
             respHeader->serviceResult = UA_STATUSCODE_BADREQUESTTOOLARGE;
@@ -956,6 +965,7 @@ UA_Boolean UA_Client_processPublishRx(UA_Client *client, UA_PublishResponse resp
             tmpAck->subAck.subscriptionId == response.subscriptionId)
             break;
     }
+
     if (tmpAck == UA_NULL ){
         tmpAck = (UA_Client_NotificationsAckNumber *) UA_malloc(sizeof(UA_Client_NotificationsAckNumber));
         tmpAck->subAck.sequenceNumber = msg.sequenceNumber;
@@ -1040,13 +1050,15 @@ UA_StatusCode UA_Client_callServerMethod(UA_Client *client, UA_NodeId objectNode
     rq->inputArgumentsSize = -1;
     UA_CallRequest_deleteMembers(&request);
     UA_StatusCode retval = response.responseHeader.serviceResult;
-    
-    if(retval == UA_STATUSCODE_GOOD) {
+
+    if(response.resultsSize > 0){
         retval |= response.results[0].statusCode;
-        *output = response.results[0].outputArguments;
-        *outputSize = response.results[0].outputArgumentsSize;
-        response.results[0].outputArguments = UA_NULL;
-        response.results[0].outputArgumentsSize = -1;
+        if(retval == UA_STATUSCODE_GOOD) {
+            *output = response.results[0].outputArguments;
+            *outputSize = response.results[0].outputArgumentsSize;
+            response.results[0].outputArguments = UA_NULL;
+            response.results[0].outputArgumentsSize = -1;
+        }
     }
     
     UA_CallResponse_deleteMembers(&response);
