@@ -810,8 +810,8 @@ UA_Server_addNodeWithSession(UA_Server *server, UA_Session *session, UA_Node *no
 #ifdef ENABLE_METHODCALLS
 UA_StatusCode
 UA_Server_addMethodNode(UA_Server* server, const UA_NodeId nodeId, const UA_QualifiedName browseName,
-                        UA_LocalizedText displayName, UA_LocalizedText description, const UA_NodeId parentNodeId, 
-                        const UA_NodeId referenceTypeId, UA_UInt32 userWriteMask, UA_UInt32 writeMask, 
+                        UA_LocalizedText displayName, UA_LocalizedText description, UA_UInt32 userWriteMask, UA_UInt32 writeMask, 
+			const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId, 
                         UA_MethodCallback method, void *handle, UA_Int32 inputArgumentsSize, const UA_Argument* inputArguments, 
                         UA_Int32 outputArgumentsSize, const UA_Argument* outputArguments, 
                         UA_NodeId* createdNodeId) {

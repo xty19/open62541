@@ -380,8 +380,8 @@ int main(int argc, char** argv) {
   UA_NodeId methodId; // Retrieve the actual ID if this node if a random id as in UA_NODEID_NUMERIC(1,0) is used
   UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(1,62541), UA_QUALIFIEDNAME(1,"ping"), UA_LOCALIZEDTEXT("en_US", "ping"),
                           UA_LOCALIZEDTEXT("en_US", "Return a single argument as passed by the caller"),
-                          UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                           0, 0,
+			  UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                           &getMonitoredItems, // Call this method
                           (void *) server,    // Pass our server pointer as a handle to the method
                           1, &inputArguments, 1, &outputArguments, &methodId);

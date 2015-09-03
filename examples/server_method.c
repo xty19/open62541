@@ -78,8 +78,8 @@ int main(int argc, char** argv) {
         
     UA_Server_addMethodNode(server, UA_NODEID_NUMERIC(1,62541), UA_QUALIFIEDNAME(1, "hello world"), 
                             UA_LOCALIZEDTEXT("en_US","Hello World"), UA_LOCALIZEDTEXT("en_US","Say `Hello World`"),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                            0, 0, &helloWorldMethod, NULL, 1, &inputArguments, 1, &outputArguments, NULL);
+                            0, 0, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                            &helloWorldMethod, NULL, 1, &inputArguments, 1, &outputArguments, NULL);
 
     /* add another method node: output argument as 1d Int32 array*/
     // define input arguments
@@ -109,8 +109,8 @@ int main(int argc, char** argv) {
 
     UA_Server_addMethodNode(server, UA_NODEID_STRING(1, "IncInt32ArrayValues"), UA_QUALIFIEDNAME(1, "IncInt32ArrayValues"),
                             UA_LOCALIZEDTEXT("en_US","1dArrayExample"), UA_LOCALIZEDTEXT("en_US","1dArrayExample"),
-                            UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), 
-                            0, 0, &IncInt32ArrayValues, NULL, 1, &inputArguments, 1, &outputArguments, NULL);
+                            0, 0, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), 
+                            &IncInt32ArrayValues, NULL, 1, &inputArguments, 1, &outputArguments, NULL);
 
     /* start server */
     UA_StatusCode retval = UA_Server_run(server, 1, &running); //blocks until running=false
