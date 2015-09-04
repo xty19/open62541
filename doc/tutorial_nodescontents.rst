@@ -1,7 +1,7 @@
 Manipulating node attributes
 ============================
 
-In our last tutorial, we created some nodes using both the server and the client side API. In this tutorial, we will explore how to manipulate the contents of nodes and create meaningful neamespace contents. This part of the tutorials focuses in particular on node fields (displayname, description,...) and variables.
+In our last tutorial, :doc:`tutorial_nodes`, we created some nodes using both the server and the client side API. In this tutorial, we will explore how to manipulate the contents of nodes and create meaningful neamespace contents. This part of the tutorials focuses in particular on node fields (displayname, description,...) and variables.
 
 Getting and setting node attributes
 -----------------------------------
@@ -311,4 +311,4 @@ Callbacks and handles are a very important concept of open62541 and we will enco
 Conclusion
 ----------
 
-In this tutorial you have learned how to harness variable contents to do your bidding. You can now create dynamic read/write callbacks that can update your data contents on the fly, even if the server is running its main loop. 
+In this tutorial you have learned how to harness variable contents to do your bidding. You can now create dynamic read/write callbacks that can update your data contents on the fly, even if the server is running its main loop. However, our nodes are out of sync with object oriented concepts - we are not using any of the Type/Inheritance/Objectmodel strengths that OPC UA provides yet. We will mend that in our next tutorial, :doc:`tutorial_noderelations`.
