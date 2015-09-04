@@ -158,8 +158,55 @@ UA_Client_deleteNodeCopy(UA_Client *client, void **node);
 
 UA_StatusCode UA_EXPORT 
 UA_Client_setAttributeValue(UA_Client *client, UA_NodeId nodeId, UA_AttributeId attributeId, void *value);
+
+#define UA_Client_setAttribute_nodeId(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_NODEID, (UA_NodeId *) VALUE);
+#define UA_Client_setAttribute_nodeClass(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_NODECLASS, (UA_NodeClass *) VALUE);
+#define UA_Client_setAttribute_browseName(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_BROWSENAME, (UA_QualifiedName *) VALUE);
+#define UA_Client_setAttribute_displayName(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_DISPLAYNAME, (UA_LocalizedText *) VALUE);
+#define UA_Client_setAttribute_description(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_DESCRIPTION, (UA_LocalizedText *) VALUE);
+#define UA_Client_setAttribute_writeMask(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_WRITEMASK, (UA_UInt32 *) VALUE);
+#define UA_Client_setAttribute_userWriteMask(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_USERWRITEMASK, (UA_UInt32 *) VALUE);
+#define UA_Client_setAttribute_isAbstract(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_ISABSTRACT, (UA_Boolean *) VALUE);
+#define UA_Client_setAttribute_symmetric(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_SYMMETRIC, (UA_Boolean *) VALUE);
+#define UA_Client_setAttribute_inverseName(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_INVERSENAME, (UA_LocalizedText *) VALUE);
+#define UA_Client_setAttribute_containsNoLoops(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_CONTAINSNOLOOPS, (UA_Boolean *) VALUE);
+#define UA_Client_setAttribute_eventNotifier(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_EVENTNOTIFIER, (UA_Byte *) VALUE);
+#define UA_Client_setAttribute_value(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_VALUE, (UA_Variant *) VALUE);
+#define UA_Client_setAttribute_dataType(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_DATATYPE, (UA_NodeId *) VALUE);
+#define UA_Client_setAttribute_valueRank(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_VALUERANK, (UA_Int32 *) VALUE);
+#define UA_Client_setAttribute_arrayDimensions(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_ARRAYDIMENSIONS, (UA_Int32 *) VALUE);
+#define UA_Client_setAttribute_accessLevel(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_ACCESSLEVEL, (UA_UInt32 *) VALUE);
+#define UA_Client_setAttribute_userAccessLevel(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_USERACCESSLEVEL, (UA_UInt32 *) VALUE);
+#define UA_Client_setAttribute_minimumSamplingInterval(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL, (UA_Double *) VALUE);
+#define UA_Client_setAttribute_historizing(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_HISTORIZING, (UA_Boolean *) VALUE);
+#define UA_Client_setAttribute_executable(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_EXECUTABLE, (UA_Boolean *) VALUE);
+#define UA_Client_setAttribute_userExecutable(SERVER, NODEID, VALUE) UA_Client_setAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_USEREXECUTABLE, (UA_Boolean *) VALUE);
+
 UA_StatusCode UA_EXPORT 
 UA_Client_getAttributeValue(UA_Client *client, UA_NodeId nodeId, UA_AttributeId attributeId, void **value);
+
+#define UA_Client_getAttribute_nodeId(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_NODEID, (void **) ((UA_NodeId **) VALUE));
+#define UA_Client_getAttribute_nodeClass(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_NODECLASS, (void **) ((UA_NodeClass **) VALUE));
+#define UA_Client_getAttribute_browseName(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_BROWSENAME, (void **) ((UA_QualifiedName **) VALUE));
+#define UA_Client_getAttribute_displayName(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_DISPLAYNAME, (void **) ((UA_LocalizedText **) VALUE));
+#define UA_Client_getAttribute_description(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_DESCRIPTION, (void **) ((UA_LocalizedText **) VALUE));
+#define UA_Client_getAttribute_writeMask(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_WRITEMASK, (void **) ((UA_UInt32 **) VALUE));
+#define UA_Client_getAttribute_userWriteMask(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_USERWRITEMASK, (void **) ((UA_UInt32 **) VALUE));
+#define UA_Client_getAttribute_isAbstract(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_ISABSTRACT, (void **) ((UA_Boolean **) VALUE));
+#define UA_Client_getAttribute_symmetric(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_SYMMETRIC, (void **) ((UA_Boolean **) VALUE));
+#define UA_Client_getAttribute_inverseName(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_INVERSENAME, (void **) ((UA_LocalizedText **) VALUE));
+#define UA_Client_getAttribute_containsNoLoops(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_CONTAINSNOLOOPS, (void **) ((UA_Boolean **) VALUE));
+#define UA_Client_getAttribute_eventNotifier(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_EVENTNOTIFIER, (void **) ((UA_Byte **) VALUE));
+#define UA_Client_getAttribute_value(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_VALUE, (void **) ((UA_Variant **) VALUE));
+#define UA_Client_getAttribute_dataType(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_DATATYPE, (void **) ((UA_NodeId **) VALUE));
+#define UA_Client_getAttribute_valueRank(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_VALUERANK, (void **) ((UA_Int32 **) VALUE));
+#define UA_Client_getAttribute_arrayDimensions(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_ARRAYDIMENSIONS, (void **) ((UA_Int32 **) VALUE));
+#define UA_Client_getAttribute_accessLevel(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_ACCESSLEVEL, (void **) ((UA_UInt32 **) VALUE));
+#define UA_Client_getAttribute_userAccessLevel(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_USERACCESSLEVEL, (void **) ((UA_UInt32 **) VALUE));
+#define UA_Client_getAttribute_minimumSamplingInterval(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL, (void **) ((UA_Double **) VALUE));
+#define UA_Client_getAttribute_historizing(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_HISTORIZING, (void **) ((UA_Boolean **) VALUE));
+#define UA_Client_getAttribute_executable(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_EXECUTABLE, (void **) ((UA_Boolean **) VALUE));
+#define UA_Client_getAttribute_userExecutable(SERVER, NODEID, VALUE) UA_Client_getAttributeValue(SERVER, NODEID, UA_ATTRIBUTEID_USEREXECUTABLE, (void **) ((UA_Boolean **) VALUE));
 
 #ifdef __cplusplus
 } // extern "C"

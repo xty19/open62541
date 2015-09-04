@@ -222,12 +222,7 @@ UA_Server_addObjectNode(UA_Server *server, const UA_NodeId nodeId, const UA_Qual
 UA_StatusCode
 UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId nodeId, const UA_QualifiedName browseName,
                                     const UA_LocalizedText displayName, const UA_LocalizedText description,  const UA_UInt32 userWriteMask, const UA_UInt32 writeMask,
-
-                                    const UA_NodeId parentNodeId,
-                                    const UA_NodeId referenceTypeId,
-
-                                    const UA_DataSource dataSource,
-
+                                    const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId, const UA_DataSource dataSource,
                                     UA_NodeId *createdNodeId) {
     UA_VariableNode *node = UA_VariableNode_new();
     UA_StatusCode retval;

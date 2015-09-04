@@ -115,7 +115,8 @@ Asserting success/failure
 Almost all functions of the open62541 API will return a ``UA_StatusCode``, which in the C world would be represented by a ``unsigned int``. OPC UA defines large number of good and bad return codes represented by this number. The constant UA_STATUSCODE_GOOD is defined as 0 in ``include/ua_statuscodes.h`` along with many other return codes. It pays off to check the return code of your function calls, as we already did implicitly in the client.
 
 Minimalistic introduction to OPC UA nodes and node IDs
------------------------
+------------------------------------------------------
+
 OPC UA nodespace model defines 9 standard attribute for every node:
 
 +---------------+----------------+

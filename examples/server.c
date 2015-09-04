@@ -223,9 +223,8 @@ int main(int argc, char** argv) {
   // add node with the datetime data source
   UA_NodeId nodeId_currentTime;
   UA_DataSource dateDataSource = (UA_DataSource) {.handle = NULL, .read = readTimeData, .write = NULL};
-  const UA_QualifiedName dateName = UA_QUALIFIEDNAME(1, "current time");
-
-  const UA_LocalizedText dateNameBrowseName = UA_LOCALIZEDTEXT("en_US","current time");
+  UA_QualifiedName dateName = UA_QUALIFIEDNAME(1, "current time");
+  UA_LocalizedText dateNameBrowseName = UA_LOCALIZEDTEXT("en_US","current time");
   UA_Server_addDataSourceVariableNode(server, UA_NODEID_NULL, dateName, dateNameBrowseName, dateNameBrowseName, 0, 0,
                                   UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                   UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),

@@ -21,7 +21,20 @@ void handler_TheAnswerChanged(UA_UInt32 handle, UA_DataValue *value) {
 
 UA_StatusCode nodeIter(UA_NodeId childId, UA_Boolean isInverse, UA_NodeId referenceTypeId, void *handle);
 UA_StatusCode nodeIter(UA_NodeId childId, UA_Boolean isInverse, UA_NodeId referenceTypeId, void *handle) {  
-  printf("References ns=%d;i=%d using i=%d ", childId.namespaceIndex, childId.identifier.numeric, referenceTypeId.identifier.numeric);
+  UA_Client *client = (UA_Client *) handle;
+  
+  if(childId.identifierType == UA_NODEIDTYPE_STRING)
+    printf("%-9d %-16.*s ", childId.namespaceIndex, childId.identifier.string.length, childId.identifier.string.data);
+  else
+    printf("%-9d %-16d ", childId.namespaceIndex, childId.identifier.numeric);
+  
+  if (client != NULL) {
+    UA_QualifiedName *browseName  = NULL;
+    UA_LocalizedText *displayName = NULL;
+    UA_Client_getAttribute_browseName(client, childId, &browseName);
+    UA_Client_getAttribute_displayName(client, childId, &displayName);
+    printf("%-16.*s %-16.*s", browseName->name.length, browseName->name.data, displayName->text.length, displayName->text.data);
+  }
   if (isInverse == UA_TRUE) {
     printf(" (inverse)");
   }
@@ -247,7 +260,7 @@ int main(int argc, char *argv[]) {
   UA_NodeId retNodeId = UA_NODEID_STRING(1, "the.answer");
 #endif
   // Iterate over all nodes in 'Objects'
-  UA_Client_forEachChildNodeCall(client, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), nodeIter, NULL);
+  UA_Client_forEachChildNodeCall(client, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), nodeIter, (void *) client);
     
   // Get a copy of the node 'TheNewVariableNode' and delete it
   void *theCopy;
