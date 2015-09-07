@@ -16,6 +16,7 @@
 ### this program.
 ###
 
+import sys
 import xml.dom.minidom as dom
 from ua_constants import *
 from logger import *
@@ -29,6 +30,10 @@ def getNextElementNode(xmlvalue):
     xmlvalue = xmlvalue.nextSibling
   return xmlvalue
 
+if sys.version_info[0] >= 3:
+  # strings are already parsed to unicode
+  def unicode(s):
+    return s
 
 class opcua_value_t():
   value = None
@@ -312,7 +317,7 @@ class opcua_value_t():
   def printOpen62541CCode_SubType(self, asIndirect=True):
     return ""
 
-  def printOpen62541CCode(self):
+  def printOpen62541CCode(self, bootstrapping = True):
     codegen = open62541_MacroHelper()
     code = []
     valueName = self.parent.getCodePrintableID() + "_variant_DataContents"
@@ -360,7 +365,9 @@ class opcua_value_t():
           for v in self.value:
             code.append(valueName + "[" + str(self.value.index(v)) + "] = " + v.printOpen62541CCode_SubType() + ";")
         code.append("UA_Variant_setArrayCopy(" + self.parent.getCodePrintableID() + "_variant, &" + valueName + ", (UA_Int32) " + str(len(self.value)) + ", &UA_TYPES[UA_TYPES_" + self.value[0].stringRepresentation.upper() + "]);")
-        code.append(self.parent.getCodePrintableID() + "->value.variant = *" + self.parent.getCodePrintableID() + "_variant;")
+        # Variant creation is now part of printSubtypeEarly, the node does not exist when the type is initialized!
+        #if (bootstrapping == True):
+        #  code.append(self.parent.getCodePrintableID() + "->value.variant = *" + self.parent.getCodePrintableID() + "_variant;")
     else:
       # User the following strategy for all directly mappable values a la 'UA_Type MyInt = (UA_Type) 23;'
       if self.value[0].__binTypeId__ == BUILTINTYPE_TYPEID_GUID:
@@ -382,12 +389,16 @@ class opcua_value_t():
           code.append("UA_Variant_setScalarCopy(" + self.parent.getCodePrintableID() + "_variant, " + valueName + ", &UA_TYPES[UA_TYPES_" + self.value[0].stringRepresentation.upper() + "]);")
           #FIXME: There is no membership definition for extensionObjects generated in this function.
           code.append("UA_" + self.value[0].stringRepresentation + "_deleteMembers(" + valueName + ");")
-          code.append(self.parent.getCodePrintableID() + "->value.variant = *" + self.parent.getCodePrintableID() + "_variant;")
+          # Variant creation is now part of printSubtypeEarly, the node does not exist when the type is initialized!
+          #if (bootstrapping == True):
+          #  code.append(self.parent.getCodePrintableID() + "->value.variant = *" + self.parent.getCodePrintableID() + "_variant;")
         else:
           code.append("UA_" + self.value[0].stringRepresentation + " " + valueName + " = " + self.value[0].printOpen62541CCode_SubType() + ";")
           code.append("UA_Variant_setScalarCopy(" + self.parent.getCodePrintableID() + "_variant, &" + valueName + ", &UA_TYPES[UA_TYPES_" + self.value[0].stringRepresentation.upper() + "]);")
           code.append("UA_" + self.value[0].stringRepresentation + "_deleteMembers(&" + valueName + ");")
-          code.append(self.parent.getCodePrintableID() + "->value.variant = *" + self.parent.getCodePrintableID() + "_variant;")
+          # Variant creation is now part of printSubtypeEarly, the node does not exist when the type is initialized!
+          #if (bootstrapping == True):
+          #  code.append(self.parent.getCodePrintableID() + "->value.variant = *" + self.parent.getCodePrintableID() + "_variant;")
     return code
 
 
@@ -829,12 +840,12 @@ class opcua_BuiltinType_boolean_t(opcua_value_t):
     # Catch XML <Boolean /> by setting the value to a default
     if xmlvalue.firstChild == None:
       log(self, "No value is given. Setting to default 0")
-      self.value = False
+      self.value = "UA_FALSE"
     else:
       if "false" in unicode(xmlvalue.firstChild.data).lower():
-        self.value = False
+        self.value = "UA_FALSE"
       else:
-        self.value = True
+        self.value = "UA_TRUE"
 
   def printOpen62541CCode_SubType(self, asIndirect=True):
     return "(UA_" + self.stringRepresentation + ") " + str(self.value)

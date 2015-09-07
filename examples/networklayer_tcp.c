@@ -16,13 +16,18 @@
 # define CLOSESOCKET(S) closesocket(S)
 #else
 # include <fcntl.h>
-# include <sys/select.h> 
+# include <sys/select.h>
 # include <netinet/in.h>
-# include <netinet/tcp.h>
+#ifndef __CYGWIN__
+    # include <netinet/tcp.h>
+#endif
 # include <sys/ioctl.h>
 # include <netdb.h> //gethostbyname for the client
 # include <unistd.h> // read, write, close
 # include <arpa/inet.h>
+#ifdef __QNX__
+#include <sys/socket.h>
+#endif
 # define CLOSESOCKET(S) close(S)
 #endif
 
@@ -30,9 +35,19 @@
 # include <urcu/uatomic.h>
 #endif
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 /****************************/
 /* Generic Socket Functions */
 /****************************/
+
+static void socket_close(UA_Connection *connection) {
+    connection->state = UA_CONNECTION_CLOSED;
+    shutdown(connection->sockfd,2);
+    CLOSESOCKET(connection->sockfd);
+}
 
 static UA_StatusCode socket_write(UA_Connection *connection, UA_ByteString *buf, size_t buflen) {
     size_t nWritten = 0;
@@ -41,12 +56,17 @@ static UA_StatusCode socket_write(UA_Connection *connection, UA_ByteString *buf,
         do {
 #ifdef _WIN32
             n = send((SOCKET)connection->sockfd, (const char*)buf->data, buflen, 0);
-            if(n < 0 && WSAGetLastError() != WSAEINTR && WSAGetLastError() != WSAEWOULDBLOCK)
+            if(n < 0 && WSAGetLastError() != WSAEINTR && WSAGetLastError() != WSAEWOULDBLOCK){
+                connection->close(connection);
+                socket_close(connection);
                 return UA_STATUSCODE_BADCONNECTIONCLOSED;
+            }
 #else
             n = send(connection->sockfd, (const char*)buf->data, buflen, MSG_NOSIGNAL);
-            if(n == -1L && errno != EINTR && errno != EAGAIN)
+            if(n == -1L && errno != EINTR && errno != EAGAIN){
+                socket_close(connection);
                 return UA_STATUSCODE_BADCONNECTIONCLOSED;
+            }
 #endif
         } while (n == -1L);
         nWritten += n;
@@ -55,12 +75,6 @@ static UA_StatusCode socket_write(UA_Connection *connection, UA_ByteString *buf,
     UA_ByteString_deleteMembers(buf);
 #endif
     return UA_STATUSCODE_GOOD;
-}
-
-static void socket_close(UA_Connection *connection) {
-    connection->state = UA_CONNECTION_CLOSED;
-    shutdown(connection->sockfd,2);
-    CLOSESOCKET(connection->sockfd);
 }
 
 static UA_StatusCode socket_recv(UA_Connection *connection, UA_ByteString *response, UA_UInt32 timeout) {
@@ -81,7 +95,7 @@ static UA_StatusCode socket_recv(UA_Connection *connection, UA_ByteString *respo
 		free(response->data);
         UA_ByteString_init(response);
         socket_close(connection);
-        return UA_CONNECTION_CLOSED; /* ret == 0 -> server has closed the connection */
+        return UA_STATUSCODE_BADCONNECTIONCLOSED; /* ret == 0 -> server has closed the connection */
 	} else if(ret < 0) {
         free(response->data);
         UA_ByteString_init(response);
@@ -265,7 +279,7 @@ static UA_StatusCode ServerNetworkLayerTCP_start(UA_ServerNetworkLayer *nl, UA_L
     if((layer->serversockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         UA_LOG_WARNING((*layer->logger), UA_LOGCATEGORY_COMMUNICATION, "Error opening socket");
         return UA_STATUSCODE_BADINTERNALERROR;
-    } 
+    }
 #endif
     const struct sockaddr_in serv_addr =
         {.sin_family = AF_INET, .sin_addr.s_addr = INADDR_ANY,
@@ -352,6 +366,12 @@ static UA_Int32 ServerNetworkLayerTCP_getJobs(UA_ServerNetworkLayer *nl, UA_Job 
             js[j].job.methodCall.data = c;
         }
         j++;
+    }
+
+    if (j == 0)
+    {
+    	free(js);
+    	js = NULL;
     }
 
     *jobs = js;
@@ -444,13 +464,15 @@ static void ClientNetworkLayerReleaseBuffer(UA_Connection *connection, UA_ByteSt
 }
 
 static void ClientNetworkLayerClose(UA_Connection *connection) {
+#ifndef UA_MULTITHREADING
+    if(connection->handle)
+        UA_ByteString_delete(connection->handle);
+    connection->handle = NULL;
+#endif
     if(connection->state == UA_CONNECTION_CLOSED)
         return;
     connection->state = UA_CONNECTION_CLOSED;
     socket_close(connection);
-#ifndef UA_MULTITHREADING
-    UA_ByteString_delete(connection->handle);
-#endif
 }
 
 /* we have no networklayer. instead, attach the reusable buffer to the handle */
@@ -514,11 +536,20 @@ UA_Connection ClientNetworkLayerTCP_connect(UA_ConnectionConfig localConf, char 
     memcpy((char *)&server_addr.sin_addr.s_addr, (char *)server->h_addr_list[0], server->h_length);
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
+    connection.state = UA_CONNECTION_OPENING;
     if(connect(connection.sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+        ClientNetworkLayerClose(&connection);
         UA_LOG_WARNING((*logger), UA_LOGCATEGORY_COMMUNICATION, "Connection failed");
         return connection;
     }
-    connection.state = UA_CONNECTION_OPENING;
+
+#ifdef SO_NOSIGPIPE
+    int val = 1;
+    if (setsockopt(connection.sockfd, SOL_SOCKET, SO_NOSIGPIPE, (void*)&val, sizeof(val)) < 0) {
+    UA_LOG_WARNING((*logger), UA_LOGCATEGORY_COMMUNICATION, "Couldn't set SO_NOSIGPIPE");
+    }
+#endif
+
     //socket_set_nonblocking(connection.sockfd);
     connection.write = socket_write;
     connection.recv = socket_recv;

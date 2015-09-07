@@ -19,13 +19,13 @@ if(GIT_FOUND)
     execute_process(COMMAND ${GIT_EXECUTABLE} describe --abbrev=7 --dirty --always --tags RESULT_VARIABLE res_var OUTPUT_VARIABLE GIT_COM_ID )
     if( NOT ${res_var} EQUAL 0 )
         set( GIT_COMMIT_ID "unknown--git-commit-id-unknown")
-        message( WARNING "Git failed (not a repo, or no tags). Build will not contain git revision info." )
+        message( STATUS "Git failed (not a repo, or no tags). Build will not contain git revision info." )
     else()
         string( REPLACE "\n" "" GIT_COMMIT_ID ${GIT_COM_ID} )
     endif()
 else()
     set( GIT_COMMIT_ID "unknown--no-git-found")
-    message( WARNING "Git not found. Build will not contain git revision info." )
+    message( STATUS "Git not found. Build will not contain git revision info." )
 endif()
 add_definitions("-DVERSION=${GIT_COMMIT_ID}")
 
@@ -46,21 +46,35 @@ if(CMAKE_COMPILER_IS_GNUCC OR "x${CMAKE_C_COMPILER_ID}" STREQUAL "xClang")
                       -Wcast-qual -Wmissing-prototypes -Wstrict-prototypes # -Wshadow -Wconversion
                       -Winit-self -Wuninitialized -Wformat-security -Wformat-nonliteral)
     # binary size reduction settings
-	add_definitions(-ffunction-sections -fdata-sections -fno-stack-protector -fno-unwind-tables
+    add_definitions(-ffunction-sections -fdata-sections -fno-stack-protector -fno-unwind-tables
                     -fno-asynchronous-unwind-tables -fno-math-errno -fmerge-all-constants -fno-ident)
-    set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,--gc-sections")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
-    set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "") # cmake sets -rdynamic by default
+  if (APPLE)
+      set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,-dead_strip")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
+  else()
+      set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,--gc-sections")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--gc-sections")
+  endif()
+  set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "") # cmake sets -rdynamic by default
 	if(NOT WIN32)
      if(NOT CYGWIN)
 	    add_definitions(-fvisibility=hidden -fPIC)
-        set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,-z,norelro -Wl,--hash-style=gnu -Wl,--build-id=none")
+      if (NOT APPLE)
+          set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,-z,norelro -Wl,--hash-style=gnu -Wl,--build-id=none")
+      endif()
       endif()
 	endif()
     if(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel" OR CMAKE_BUILD_TYPE STREQUAL "Release")
         set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -s")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -s")
     endif()
+    if (APPLE)
+        set(CMAKE_MACOSX_RPATH 1)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_DARWIN_C_SOURCE=1")
+    endif()
+elseif(MSVC)
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif()
 
 # build the main library
@@ -118,7 +132,7 @@ file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src_generated")
 
 option(ENABLE_SUBSCRIPTIONS "Enable compilation of subscription and monitoring support." OFF)
 if(ENABLE_SUBSCRIPTIONS)
-  add_definitions(-DENABLE_SUBSCRIPTIONS)
+  set(ENABLE_SUBSCRIPTIONS ON) #to propagate it to the config file
   list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/server/ua_services_subscription.c
                           ${PROJECT_SOURCE_DIR}/src/server/ua_subscription.c
                           ${PROJECT_SOURCE_DIR}/src/server/ua_subscription_manager.c)
@@ -185,7 +199,7 @@ set(UA_LOGLEVEL 300 CACHE STRING "Level at which logs shall be reported")
 # Enable Methodcall service
 option(ENABLE_METHODCALLS "Enable CallMethod/MethodCall service set" OFF)
 if(ENABLE_METHODCALLS)
-    add_definitions(-DENABLE_METHODCALLS)
+    set(ENABLE_METHODCALLS ON) #to propagate it to the config file
     list(APPEND lib_sources ${PROJECT_SOURCE_DIR}/src/server/ua_services_call.c)
 endif()
 
@@ -220,7 +234,10 @@ if(EXTENSION_UDP)
 	message(STATUS "Extensions: enabling udp")
 	add_definitions(-DEXTENSION_UDP)
 	add_executable(exampleServerUDP $<TARGET_OBJECTS:open62541-object> examples/networklayer_udp.c examples/server_udp.c)
-    target_link_libraries(exampleServerUDP rt)
+  target_link_libraries(exampleServerUDP urcu-cds urcu urcu-common)
+  if (NOT APPLE)
+      target_link_libraries(exampleServerUDP rt)
+  endif()
 endif()
 
 option(EXTENSION_STATELESS "Enable stateless extension" OFF)
@@ -233,16 +250,12 @@ option(ENABLE_AMALGAMATION "Concatenate the library to a single file open62541.h
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/open62541.h
                PRE_BUILD
                COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${GIT_COMMIT_ID} ${CMAKE_CURRENT_BINARY_DIR}/open62541.h ${exported_headers}
-
-
                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${exported_headers} ${internal_headers})
 
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/open62541.c
                PRE_BUILD
-
                COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${GIT_COMMIT_ID} ${CMAKE_CURRENT_BINARY_DIR}/open62541.c
                                             ${internal_headers} ${PROJECT_SOURCE_DIR}/src/server/ua_nodestore_hash.inc ${lib_sources}
-
                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${internal_headers} ${PROJECT_SOURCE_DIR}/src/server/ua_nodestore_hash.inc ${lib_sources})
 
 if(ENABLE_AMALGAMATION)
@@ -258,10 +271,19 @@ else()
     include_directories(${PROJECT_BINARY_DIR}/src_generated)
 endif()
 target_compile_definitions(open62541-object PRIVATE -DUA_DYNAMIC_LINKING)
+
 add_library(open62541 SHARED $<TARGET_OBJECTS:open62541-object>)
+add_library(open62541-static STATIC $<TARGET_OBJECTS:open62541-object>)
 target_compile_definitions(open62541 PRIVATE -DUA_DYNAMIC_LINKING)
+target_compile_definitions(open62541-static PRIVATE -DUA_DYNAMIC_LINKING)
 if(WIN32)
-    target_link_libraries(open62541 ws2_32) #since networklayer_tcp is linked into the amalgate
+    # since networklayer_tcp is linked into the amalgate
+    target_link_libraries(open62541 ws2_32)
+    target_link_libraries(open62541-static ws2_32)
+endif()
+if(ENABLE_MULTITHREADING)
+  target_link_libraries(open62541 urcu-cds urcu urcu-common pthread)
+  target_link_libraries(open62541-static urcu-cds urcu urcu-common pthread)
 endif()
 
 # build language bindings for the library
@@ -294,7 +316,7 @@ if(BUILD_EXAMPLESERVER)
     if(WIN32)
         target_link_libraries(server_static ws2_32)
         target_link_libraries(server ws2_32)
-    else()
+    elseif(NOT APPLE)
         target_link_libraries(server_static rt)
         target_link_libraries(server rt)
     endif()
@@ -331,7 +353,7 @@ if(BUILD_EXAMPLECLIENT)
     if(WIN32)
         target_link_libraries(client_static ws2_32)
         target_link_libraries(client ws2_32)
-    else()
+    elseif(NOT APPLE)
         target_link_libraries(client_static rt)
         target_link_libraries(client rt)
     endif()
@@ -357,7 +379,59 @@ endif()
 
 option(BUILD_EXAMPLES "Build example servers and clients" OFF)
 if(BUILD_EXAMPLES)
-    add_subdirectory(examples)
+    #add_subdirectory(examples)
+    #FIXME: we had problem with static linking for msvs, here a quick and dirty workaround
+    #http://stackoverflow.com/questions/3704374/linking-error-lnk2019-in-msvc-unresolved-symbols-with-imp-prefix-but-shoul
+    #http://stackoverflow.com/questions/1089828/same-header-file-for-both-dll-and-static-library
+    if(NOT WIN32)
+		list(APPEND LIBS pthread)
+		if (NOT APPLE)
+		    list(APPEND LIBS rt)
+		endif()
+	else()
+		list(APPEND LIBS ws2_32)
+	endif()
+	if(ENABLE_MULTITHREADING)
+		list(APPEND LIBS urcu-cds urcu urcu-common)
+	endif(ENABLE_MULTITHREADING)
+
+    add_executable(server_variable ${PROJECT_SOURCE_DIR}/examples/server_variable.c $<TARGET_OBJECTS:open62541-object>)
+	target_link_libraries(server_variable ${LIBS})
+
+	add_executable(server_datasource ${PROJECT_SOURCE_DIR}/examples/server_datasource.c $<TARGET_OBJECTS:open62541-object>)
+	target_link_libraries(server_datasource ${LIBS})
+
+	add_executable(server_firstSteps ${PROJECT_SOURCE_DIR}/examples/server_firstSteps.c $<TARGET_OBJECTS:open62541-object>)
+	target_link_libraries(server_firstSteps ${LIBS})
+
+	add_executable(client_firstSteps ${PROJECT_SOURCE_DIR}/examples/client_firstSteps.c $<TARGET_OBJECTS:open62541-object>)
+	target_link_libraries(client_firstSteps ${LIBS})
+
+	add_executable(server_repeated_job ${PROJECT_SOURCE_DIR}/examples/server_repeated_job.c $<TARGET_OBJECTS:open62541-object>)
+	target_link_libraries(server_repeated_job ${LIBS})
+
+	if(NOT ENABLE_AMALGAMATION AND NOT MSVC)
+		add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/nodeset.h ${PROJECT_BINARY_DIR}/src_generated/nodeset.c
+				       PRE_BUILD
+				       COMMAND ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/generate_open62541CCode.py -i ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/NodeID_Blacklist_FullNS0.txt ${PROJECT_SOURCE_DIR}/tools/schema/namespace0/Opc.Ua.NodeSet2.xml ${PROJECT_SOURCE_DIR}/examples/server_nodeset.xml ${PROJECT_BINARY_DIR}/src_generated/nodeset
+				       DEPENDS ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/generate_open62541CCode.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/logger.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/open62541_MacroHelper.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/ua_builtin_types.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/ua_constants.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/ua_namespace.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/ua_node_types.py
+				               ${PROJECT_SOURCE_DIR}/tools/pyUANamespace/NodeID_Blacklist_FullNS0.txt
+				               ${PROJECT_SOURCE_DIR}/examples/server_nodeset.xml)
+				       
+		add_executable(server_nodeset ${PROJECT_SOURCE_DIR}/examples/server_nodeset.c ${PROJECT_BINARY_DIR}/src_generated/nodeset.c $<TARGET_OBJECTS:open62541-object>)
+		target_link_libraries(server_nodeset ${LIBS})
+	endif()
+
+	if(ENABLE_METHODCALLS)
+	  add_executable(server_method ${PROJECT_SOURCE_DIR}/examples/server_method.c $<TARGET_OBJECTS:open62541-object>)
+	  target_link_libraries(server_method ${LIBS})
+	endif()
 endif()
 
 # build documentation
@@ -371,9 +445,15 @@ if(BUILD_DOCUMENTATION)
                       ${DOXYGEN_EXECUTABLE} ${PROJECT_BINARY_DIR}/Doxyfile
                       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
                       COMMENT "Generating API documentation with Doxygen")
+    add_custom_target(latex ${SPHINX_EXECUTABLE}
+      -b latex -c "${PROJECT_BINARY_DIR}"
+      "${PROJECT_SOURCE_DIR}/doc" "${PROJECT_BINARY_DIR}/doc/sphinx"
+      DEPENDS doxygen
+      COMMENT "Building LaTeX sources for documentation with Sphinx")
     add_custom_target(doc ${SPHINX_EXECUTABLE}
       -b html -c "${PROJECT_BINARY_DIR}"
       "${PROJECT_SOURCE_DIR}/doc" "${PROJECT_BINARY_DIR}/doc/sphinx"
+      COMMAND ${CMAKE_COMMAND} -E copy "${PROJECT_SOURCE_DIR}/doc/open62541_html.png" "${PROJECT_BINARY_DIR}/doc/sphinx/_static/"
       DEPENDS doxygen
       COMMENT "Building HTML documentation with Sphinx")
 endif()

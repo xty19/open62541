@@ -37,7 +37,6 @@ void UA_Subscription_deleteMembers(UA_Subscription *subscription, UA_Server *ser
     
     // Delete unpublished Notifications
     LIST_FOREACH_SAFE(not, &subscription->unpublishedNotifications, listEntry, tmp_not) {
-        LIST_REMOVE(not, listEntry);
         Subscription_deleteUnpublishedNotification(not->notification->sequenceNumber, subscription);
     }
     
@@ -81,7 +80,7 @@ void Subscription_generateKeepAlive(UA_Subscription *subscription) {
 void Subscription_updateNotifications(UA_Subscription *subscription) {
     UA_MonitoredItem *mon;
     //MonitoredItem_queuedValue *queuedValue;
-    UA_unpublishedNotification *msg = NULL;
+    UA_unpublishedNotification *msg = NULL, *tempmsg;
     UA_UInt32 monItemsChangeT = 0, monItemsStatusT = 0, monItemsEventT = 0;
     UA_DataChangeNotification *changeNotification;
     size_t notificationOffset;
@@ -106,9 +105,8 @@ void Subscription_updateNotifications(UA_Subscription *subscription) {
     // FIXME: This is hardcoded to 100 because it is not covered by the spec but we need to protect the server!
     if(Subscription_queuedNotifications(subscription) >= 10) {
         // Remove last entry
-        LIST_FOREACH(msg, &subscription->unpublishedNotifications, listEntry)
-            LIST_REMOVE(msg, listEntry);
-        UA_free(msg);
+        LIST_FOREACH_SAFE(msg, &subscription->unpublishedNotifications, listEntry, tempmsg)
+            Subscription_deleteUnpublishedNotification(msg->notification->sequenceNumber, subscription);
     }
     
     if(monItemsChangeT == 0 && monItemsEventT == 0 && monItemsStatusT == 0) {
@@ -156,7 +154,7 @@ void Subscription_updateNotifications(UA_Subscription *subscription) {
                 monItemsChangeT += MonitoredItem_QueueToDataChangeNotifications(&changeNotification->monitoredItems[monItemsChangeT], mon);
                 MonitoredItem_ClearQueue(mon);
             }
-
+            
             changeNotification->monitoredItemsSize  = monItemsChangeT;
             changeNotification->diagnosticInfosSize = 0;
             changeNotification->diagnosticInfos     = UA_NULL;
@@ -275,7 +273,7 @@ UA_StatusCode Subscription_createdUpdateJob(UA_Server *server, UA_Guid jobId, UA
         return UA_STATUSCODE_BADSERVERINDEXINVALID;
         
     UA_Job *theWork;
-    theWork = (UA_Job *) malloc(sizeof(UA_Job));
+    theWork = (UA_Job *) UA_malloc(sizeof(UA_Job));
     if(!theWork)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     
@@ -355,10 +353,11 @@ int MonitoredItem_QueueToDataChangeNotifications(UA_MonitoredItemNotification *d
     TAILQ_FOREACH(queueItem, &monitoredItem->queue, listEntry) {
         dst[queueSize].clientHandle = monitoredItem->clientHandle;
         dst[queueSize].value.hasServerPicoseconds = UA_FALSE;
-        dst[queueSize].value.hasServerTimestamp   = UA_FALSE;
-        dst[queueSize].value.serverTimestamp      = UA_FALSE;
+        dst[queueSize].value.hasServerTimestamp   = UA_TRUE;
+        dst[queueSize].value.serverTimestamp      = UA_DateTime_now();
         dst[queueSize].value.hasSourcePicoseconds = UA_FALSE;
-        dst[queueSize].value.hasSourceTimestamp   = UA_FALSE;
+        dst[queueSize].value.hasSourceTimestamp   = UA_TRUE;
+        dst[queueSize].value.sourceTimestamp      = UA_DateTime_now();
         dst[queueSize].value.hasValue             = UA_TRUE;
         dst[queueSize].value.status = UA_STATUSCODE_GOOD;
     

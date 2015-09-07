@@ -1,6 +1,11 @@
 #include "ua_util.h"
 #include "ua_server_internal.h"
 
+#if defined(__APPLE__) || defined(__MACH__)
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 /**
  * There are four types of job execution:
  *
@@ -22,6 +27,16 @@
  * - Remove the entry from the list
  * - mark it as "dead" with an atomic operation
  * - add a delayed job that frees the memory when all concurrent operations have completed
+ * 
+ * This approach to concurrently accessible memory is known as epoch based reclamation [1]. According to
+ * [2], it performs competitively well on many-core systems. Our version of EBR does however not require
+ * a global epoch. Instead, every worker thread has its own epoch counter that we observe for changes.
+ * 
+ * [1] Fraser, K. 2003. Practical lock freedom. Ph.D. thesis. Computer Laboratory, University of Cambridge.
+ * [2] Hart, T. E., McKenney, P. E., Brown, A. D., & Walpole, J. (2007). Performance of memory reclamation
+ *     for lockless synchronization. Journal of Parallel and Distributed Computing, 67(12), 1270-1285.
+ * 
+ * 
  */
 
 #define MAXTIMEOUT 50000 // max timeout in microsec until the next main loop iteration
@@ -89,7 +104,7 @@ static void dispatchJobs(UA_Server *server, UA_Job *jobs, size_t jobsSize) {
         cds_wfcq_node_init(&wln->node);
         cds_wfcq_enqueue(&server->dispatchQueue_head, &server->dispatchQueue_tail, &wln->node);
         jobsSize -= size;
-    } 
+    }
 }
 
 // throwaway struct to bring data into the worker threads
@@ -106,7 +121,7 @@ static void * workerLoop(struct workerStartData *startInfo) {
     *startInfo->workerCounter = c;
     UA_Server *server = startInfo->server;
     UA_free(startInfo);
-    
+
     pthread_mutex_t mutex; // required for the condition variable
     pthread_mutex_init(&mutex,0);
     pthread_mutex_lock(&mutex);
@@ -121,7 +136,17 @@ static void * workerLoop(struct workerStartData *startInfo) {
             UA_free(wln);
         } else {
             /* sleep until a work arrives (and wakes up all worker threads) */
-            clock_gettime(CLOCK_REALTIME, &to);
+            #if defined(__APPLE__) || defined(__MACH__) // OS X does not have clock_gettime, use clock_get_time
+              clock_serv_t cclock;
+              mach_timespec_t mts;
+              host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+              clock_get_time(cclock, &mts);
+              mach_port_deallocate(mach_task_self(), cclock);
+              to.tv_sec = mts.tv_sec;
+              to.tv_nsec = mts.tv_nsec;
+            #else
+              clock_gettime(CLOCK_REALTIME, &to);
+            #endif
             to.tv_sec += 2;
             pthread_cond_timedwait(&server->dispatchQueue_condition, &mutex, &to);
         }
@@ -196,7 +221,7 @@ static UA_StatusCode addRepeatedJob(UA_Server *server, struct AddRepeatedJob * U
         lastTw = tempTw;
         tempTw = LIST_NEXT(lastTw, pointers);
     }
-    
+
     if(matchingTw) {
         /* append to matching entry */
         matchingTw = UA_realloc(matchingTw, sizeof(struct RepeatedJobs) +
@@ -511,6 +536,8 @@ static void processMainLoopJobs(UA_Server *server) {
 #endif
 
 UA_StatusCode UA_Server_run_startup(UA_Server *server, UA_UInt16 nThreads, UA_Boolean *running) {
+UA_StatusCode result = UA_STATUSCODE_GOOD;
+
 #ifdef UA_MULTITHREADING
     /* Prepare the worker threads */
     server->running = running; // the threads need to access the variable
@@ -533,9 +560,9 @@ UA_StatusCode UA_Server_run_startup(UA_Server *server, UA_UInt16 nThreads, UA_Bo
 
     /* Start the networklayers */
     for(size_t i = 0; i < server->networkLayersSize; i++)
-        server->networkLayers[i].start(&server->networkLayers[i], &server->logger);
+        result |= server->networkLayers[i].start(&server->networkLayers[i], &server->logger);
 
-    return UA_STATUSCODE_GOOD;
+    return result;
 }
 
 UA_StatusCode UA_Server_run_mainloop(UA_Server *server, UA_Boolean *running) {
@@ -610,9 +637,10 @@ UA_StatusCode UA_Server_run_shutdown(UA_Server *server, UA_UInt16 nThreads){
 }
 
 UA_StatusCode UA_Server_run(UA_Server *server, UA_UInt16 nThreads, UA_Boolean *running) {
-    UA_Server_run_startup(server, nThreads, running);
-    while(*running) {
-        UA_Server_run_mainloop(server, running);
+    if(UA_STATUSCODE_GOOD == UA_Server_run_startup(server, nThreads, running)){
+        while(*running) {
+            UA_Server_run_mainloop(server, running);
+        }
     }
     UA_Server_run_shutdown(server, nThreads);
     return UA_STATUSCODE_GOOD;
