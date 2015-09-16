@@ -26,7 +26,7 @@ Automatically compiled MSVC binaries are available [here](https://ci.appveyor.co
 ### Contribute to open62541
 As an open source project, we invite new contributors to help improving open62541. If you are a developer, your bugfixes and new features are very welcome. Note that there are ways to contribute even without deep knowledge of the project or the UA standard:
 - [Report bugs](https://github.com/acplt/open62541/issues)
-- Improve the [documentation](http://open62541.org/doc)
+- Improve the [documentation for 0.1](http://open62541.org/doc) and [documentation for 0.2](http://open62541.org/doc/sphinx)
 - Work on issues marked as "[easy hacks](https://github.com/acplt/open62541/labels/easy%20hack)"
 
 ### Example Server Implementation
@@ -60,11 +60,12 @@ int main(int argc, char** argv)
     UA_Int32 myInteger = 42;
     UA_Variant_setScalarCopy(myIntegerVariant, &myInteger, &UA_TYPES[UA_TYPES_INT32]);
     UA_QualifiedName myIntegerName = UA_QUALIFIEDNAME(1, "the answer");
+    UA_LocalizedText myIntegerBrowseName = UA_LOCALIZEDTEXT("en_US","the answer");
     UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, "the.answer");
     UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
     UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
-    UA_Server_addVariableNode(server, myIntegerVariant, myIntegerName,
-                              myIntegerNodeId, parentNodeId, parentReferenceNodeId);
+    UA_Server_addVariableNode(server, myIntegerNodeId, myIntegerName, myIntegerBrowseName, myIntegerBrowseName,
+                              0, 0, parentNodeId, parentReferenceNodeId, myIntegerVariant, NULL);
 
     /* run the server loop */
     UA_StatusCode retval = UA_Server_run(server, WORKER_THREADS, &running);

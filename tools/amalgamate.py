@@ -18,7 +18,7 @@ pos = outname.find(".")
 if pos > 0:
     outname = outname[:pos]
 include_re = re.compile("^#include (\".*\").*$")
-guard_re = re.compile("^#(?:(?:ifndef|define) [A-Z_]+_H_|endif /\* [A-Z_]+_H_ \*/)")
+guard_re = re.compile("^#(?:(?:ifndef|define) [A-Z_]+_H_|endif /\* [A-Z_]+_H_ \*/|endif // [A-Z_]+_H_)")
 includes = []
 
 print ("Starting amalgamating file "+ args.outfile)
@@ -58,7 +58,12 @@ if not is_c:
 else:
     file.write(u'''#ifndef UA_DYNAMIC_LINKING
 # define UA_DYNAMIC_LINKING
-#endif\n\n''')
+#endif
+
+#ifndef UA_INTERNAL
+#define UA_INTERNAL
+#endif
+\n''')
     file.write(u"#include \"" + outname + ".h\"\n")
 
 for fname in args.inputs:

@@ -74,6 +74,22 @@
 # endif
 #endif
 
+/************************/
+/* Thread Local Storage */
+/************************/
+
+#ifdef UA_MULTITHREADING
+# ifdef __GNUC__
+#  define UA_THREAD_LOCAL __thread
+# elif defined(_MSC_VER)
+#  define UA_THREAD_LOCAL __declspec(thread)
+# else
+#  error No thread local storage keyword defined for this compiler
+# endif
+#else
+# define UA_THREAD_LOCAL
+#endif
+
 /********************/
 /* System Libraries */
 /********************/
@@ -81,19 +97,13 @@
 #include <stdarg.h> // va_start, va_end
 #include <time.h>
 #include <stdio.h> // printf
-#include <inttypes.h>
 
 #ifdef _WIN32
 # include <winsock2.h> //needed for amalgation
 # include <windows.h>
 # undef SLIST_ENTRY
-# define RAND(SEED) (UA_UInt32)rand()
 #else
-  #ifdef __CYGWIN__
-  extern int rand_r (unsigned int *__seed);
-  #endif
-  # include <sys/time.h>
-  # define RAND(SEED) (UA_UInt32)rand_r(SEED)
+# include <sys/time.h>
 #endif
 
 /*************************/
