@@ -29,6 +29,11 @@
  * - Add a delayed job that frees the memory when all currently running jobs have completed
  */
 
+typedef struct {
+    UA_Job job;
+    UA_Guid id;
+} UA_IdentifiedJob;
+
 /**
  * The RepeatedJobs structure contains an array of jobs that are executed with the same repetition
  * interval. The linked list is sorted, so we can stop traversing when the first element has
@@ -39,8 +44,7 @@ typedef struct UA_RepeatedJobs {
     UA_DateTime nextTime; ///< The next time when the jobs are to be executed
     UA_UInt32 interval; ///< Interval in 100ns resolution
     size_t jobsSize; ///< Number of jobs
-    UA_Job *jobs; ///< The jobs. This is not a pointer, but a variable sized struct.
-    UA_Guid *jobIds; ///< The identifiers of the jobs (to delete them individually)
+    UA_IdentifiedJob jobs[]; ///< The jobs list. This is a flexible array member.
 } UA_RepeatedJobs;
 
 #ifdef UA_MULTITHREADING
@@ -62,36 +66,43 @@ typedef struct UA_DelayedJobs {
 typedef struct {
     void *getJobsHandle; ///< Custom data for the polling layer
     UA_UInt16 (getJobs*)(void *handle, UA_Job **jobs, UA_UInt16 timeout); ///< Wait until jobs arrive or return after the timeout
-    void *processJobsHandle; ///< Custom data for the processing layer
-    void (processJobs*)(void *handle, UA_Job *jobs, size_t jobsSize); ///< Job processing layer 
+    void *processJobHandle; ///< Custom data for the processing layer
+    void (processJob*)(void *handle, UA_Job *job); ///< Job processing layer 
     LIST_HEAD(UA_RepeatedJobsList, UA_RepeatedJobs) repeatedJobs;
 #ifdef UA_MULTITHREADING
-    LIST_HEAD(UA_DelayedJobsList, UA_DelayedJobs) delayedJobs;
 	struct cds_wfcq_head dispatchQueue_head; ///< Job dispatch queue for workers
     pthread_cond_t dispatchQueue_condition; ///< So the workers pause if the queue is empty
+    LIST_HEAD(UA_DelayedJobsList, UA_DelayedJobs) delayedJobs;
+    struct cds_lfs_stack dispatchLoopJobs; ///< Jobs that need to be executed in the event loop process and not by the workers
     size_t workersSize; ///< Number of workers
     pthread_t *workers; ///< Thread structs of the workers
     UA_UInt32 **workerCounters; ///< Every worker has his a counter that he advances when checking out work
-    struct cds_lfs_stack eventLoopJobs; ///< Jobs that need to be executed in the event loop process and not by the workers
 	struct cds_wfcq_tail dispatchQueue_tail; ///< Dispatch queue tail (not in the same cacheline)
 #endif
 } UA_DispatchLoop;
 
-UA_StatusCode UA_DispatchLoop_addRepeatedJob(UA_DispatchLoop *dl, UA_Job job, UA_UInt32 interval, UA_Guid *jobId);
-UA_StatusCode UA_DispatchLoop_removeRepeatedJob(UA_DispatchLoop *dl, UA_Guid jobId);
+void UA_DispatchLoop_init(UA_DispatchLoop *dl);
+
+/* Sets the id of the job (if not NULL) so we can delete it*/
+UA_StatusCode UA_DispatchLoop_addRepeatedJob(UA_DispatchLoop *dl, const UA_Job *job, UA_UInt32 interval, UA_Guid *jobId);
+UA_StatusCode UA_DispatchLoop_removeRepeatedJob(UA_DispatchLoop *dl, const UA_Guid *jobId);
+
+#ifdef UA_MULTITHREADING
+UA_StatusCode UA_DispatchLoop_addDelayedJob(UA_DispatchLoop *dl, const UA_Job *job);
+#endif
 
 /** Starts the workers and runs the event loop until *running becomes false. Then, the event loop is
     shut down and the workers threads are cancelled. */
-UA_StatusCode UA_DispatchLoop_run(UA_DispatchLoop *dl, UA_UInt16 nThreads, UA_Boolean *running);
+UA_StatusCode UA_DispatchLoop_run(UA_DispatchLoop *dl, UA_UInt16 nWorkers, UA_Boolean *running);
 
 /** Starts the workers, but does not run the loop itself */
-UA_StatusCode UA_DispatchLoop_startup(UA_DispatchLoop *dl, UA_UInt16 nThreads);
+UA_StatusCode UA_DispatchLoop_startup(UA_DispatchLoop *dl, UA_UInt16 nWorkers);
 
 /** Run a single iteration of the mainloop. Returns the max delay before the next iteration in order
     to dispatch the next repeated work in time. */
 UA_UInt16 UA_DispatchLoop_iterate(UA_DispatchLoop *dl);
 
-/** Shuts down the event loop and cancels the worker threads. */
-UA_StatusCode UA_DispatchLoop_shutdown(UA_DispatchLoop *dl);
+/** Cancels the worker threads and executes all queued work */
+void UA_DispatchLoop_shutdown(UA_DispatchLoop *dl);
 
 #endif /* UA_ASYNC_H_ */
