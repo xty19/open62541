@@ -119,8 +119,6 @@ UA_Server_forEachChildNodeCall(UA_Server *server, UA_NodeId parentNodeId,
         retval |= callback(ref->targetId.nodeId, ref->isInverse,
                            ref->referenceTypeId, handle);
     }
-    
-    UA_NodeStore_release(parent);
     return retval;
 }
 
@@ -1312,13 +1310,10 @@ UA_Server_getNodeAttribute_method(UA_Server *server, UA_NodeId nodeId,
     if(!node)
         return UA_STATUSCODE_BADNODEIDUNKNOWN;
     
-    if(node->nodeClass != UA_NODECLASS_METHOD) {
-        UA_NodeStore_release(node);
+    if(node->nodeClass != UA_NODECLASS_METHOD)
         return UA_STATUSCODE_BADNODECLASSINVALID;
-    }
 
     *method = ((const UA_MethodNode*)node)->attachedMethod;
-    UA_NodeStore_release(node);
     return UA_STATUSCODE_GOOD;
 }
 #endif
@@ -1334,11 +1329,9 @@ UA_Server_getNodeAttribute_value_dataSource(UA_Server *server, UA_NodeId nodeId,
     if((node->nodeClass != UA_NODECLASS_VARIABLE &&
         node->nodeClass != UA_NODECLASS_VARIABLETYPE) ||
        node->valueSource != UA_VALUESOURCE_DATASOURCE) {
-        UA_NodeStore_release((const UA_Node*)node);
         return UA_STATUSCODE_BADNODECLASSINVALID;
     }
 
     *dataSource = node->value.dataSource;
-    UA_NodeStore_release((const UA_Node*)node);
     return UA_STATUSCODE_GOOD;
 }

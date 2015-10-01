@@ -25,6 +25,13 @@
  * @{
  */
 
+/* For multithreading, nodes in the nodestore are immutable */
+#ifdef UA_MULTITHREADING
+# define UA_MT_CONST const
+#else
+# define UA_MT_CONST
+#endif
+
 struct UA_NodeStore;
 typedef struct UA_NodeStore UA_NodeStore;
 
@@ -41,20 +48,22 @@ void UA_NodeStore_delete(UA_NodeStore *ns);
  * is not NULL, then a pointer to the managed node is returned (and must be
  * released).
  */
-UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, const UA_Node **inserted);
+UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, UA_MT_CONST UA_Node **inserted);
 
 /**
  * Replace an existing node in the nodestore. If the node was already replaced,
- * UA_STATUSCODE_BADINTERNALERROR is returned. If inserted is not NULL, a
- * pointer to the managed (immutable) node is returned.
+ * UA_STATUSCODE_BADINTERNALERROR is returned. A pointer to the inserted node is
+ * returned. It is important that oldNode is not used afterwards in the same
+ * thread.
  */
-UA_StatusCode UA_NodeStore_replace(UA_NodeStore *ns, const UA_Node *oldNode, UA_Node *node, const UA_Node **inserted);
+UA_StatusCode UA_NodeStore_replace(UA_NodeStore *ns, UA_MT_CONST UA_Node *oldNode,
+                                   UA_Node *node, UA_MT_CONST UA_Node **inserted);
 
 /**
  * Remove a node from the nodestore. Always succeeds, even if the node was not
  * found.
  */
-UA_StatusCode UA_NodeStore_remove(UA_NodeStore *ns, const UA_NodeId *nodeid);
+UA_StatusCode UA_NodeStore_remove(UA_NodeStore *ns, UA_MT_CONST UA_NodeId *nodeid);
 
 /**
  * Retrieve a managed node (read-only) from the nodestore. Nodes are reference-
@@ -62,13 +71,7 @@ UA_StatusCode UA_NodeStore_remove(UA_NodeStore *ns, const UA_NodeId *nodeid);
  * entirely. After the node is no longer used, it needs to be released to decrease
  * the reference count.
  */
-const UA_Node * UA_NodeStore_get(const UA_NodeStore *ns, const UA_NodeId *nodeid);
-
-/**
- * Release a managed node. Do never call this with a node that isn't managed by a
- * nodestore.
- */
-void UA_NodeStore_release(const UA_Node *managed);
+UA_MT_CONST UA_Node * UA_NodeStore_get(const UA_NodeStore *ns, const UA_NodeId *nodeid);
 
 /**
  * A function that can be evaluated on all entries in a nodestore via

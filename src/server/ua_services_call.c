@@ -22,7 +22,6 @@ static const UA_VariableNode
                 UA_String_equal(&withBrowseName, &refTarget->browseName.name)) {
                 return (const UA_VariableNode*) refTarget;
             }
-            UA_NodeStore_release(refTarget);
         }
     }
     return UA_NULL;
@@ -119,17 +118,17 @@ callMethod(UA_Server *server, UA_Session *session, UA_CallMethodRequest *request
     const UA_ObjectNode *withObject = (const UA_ObjectNode*)UA_NodeStore_get(server->nodestore, &request->objectId);
     if(!withObject) {
         result->statusCode = UA_STATUSCODE_BADNODEIDINVALID;
-        goto releaseMethodReturn;
+        return;
     }
     
     if(methodCalled->nodeClass != UA_NODECLASS_METHOD) {
         result->statusCode = UA_STATUSCODE_BADNODECLASSINVALID;
-        goto releaseBothReturn;
+        return;
     }
     
     if(withObject->nodeClass != UA_NODECLASS_OBJECT && withObject->nodeClass != UA_NODECLASS_OBJECTTYPE) {
         result->statusCode = UA_STATUSCODE_BADNODECLASSINVALID;
-        goto releaseBothReturn;
+        return;
     }
     
     /* Verify method/object relations */
@@ -146,12 +145,12 @@ callMethod(UA_Server *server, UA_Session *session, UA_CallMethodRequest *request
         }
     }
     if(result->statusCode != UA_STATUSCODE_GOOD)
-        goto releaseBothReturn;
+        return;
         
     /* Verify method executable */
     if(methodCalled->executable == UA_FALSE || methodCalled->userExecutable == UA_FALSE) {
         result->statusCode = UA_STATUSCODE_BADNOTWRITABLE; // There is no NOTEXECUTABLE?
-        goto releaseBothReturn;
+        return;
     }
 
     /* Verify Input Argument count, types and sizes */
@@ -160,13 +159,12 @@ callMethod(UA_Server *server, UA_Session *session, UA_CallMethodRequest *request
     if(inputArguments) {
         // Expects arguments
         result->statusCode = argConformsToDefinition(request, inputArguments);
-        UA_NodeStore_release((const UA_Node*)inputArguments);
         if(result->statusCode != UA_STATUSCODE_GOOD)
-            goto releaseBothReturn;
+            return;
     } else if(request->inputArgumentsSize > 0) {
         // Expects no arguments, but got some
         result->statusCode = UA_STATUSCODE_BADINVALIDARGUMENT;
-        goto releaseBothReturn;
+        return;
     }
 
     const UA_VariableNode *outputArguments = getArgumentsVariableNode(server, methodCalled,
@@ -174,7 +172,7 @@ callMethod(UA_Server *server, UA_Session *session, UA_CallMethodRequest *request
     if(!outputArguments) {
         // A MethodNode must have an OutputArguments variable (which may be empty)
         result->statusCode = UA_STATUSCODE_BADINTERNALERROR;
-        goto releaseBothReturn;
+        return;
     }
     
     // Call method if available
@@ -189,13 +187,6 @@ callMethod(UA_Server *server, UA_Session *session, UA_CallMethodRequest *request
         result->statusCode = UA_STATUSCODE_BADNOTWRITABLE; // There is no NOTEXECUTABLE?
     
     /* FIXME: Verify Output Argument count, types and sizes */
-    if(outputArguments)
-        UA_NodeStore_release((const UA_Node*)outputArguments);
-
- releaseBothReturn:
-    UA_NodeStore_release((const UA_Node*)withObject);
- releaseMethodReturn:
-    UA_NodeStore_release((const UA_Node*)methodCalled);
 }
 
 void Service_Call(UA_Server *server, UA_Session *session, const UA_CallRequest *request,

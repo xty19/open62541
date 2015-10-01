@@ -28,40 +28,40 @@ void Service_AddNodes_single(UA_Server *server, UA_Session *session, UA_Node *no
         (const UA_ReferenceTypeNode *)UA_NodeStore_get(server->nodestore, referenceTypeId);
     if(!referenceType) {
         result->statusCode = UA_STATUSCODE_BADREFERENCETYPEIDINVALID;
-        goto ret;
+        return;
     }
 
     if(referenceType->nodeClass != UA_NODECLASS_REFERENCETYPE) {
         result->statusCode = UA_STATUSCODE_BADREFERENCETYPEIDINVALID;
-        goto ret2;
+        return;
     }
 
     if(referenceType->isAbstract == UA_TRUE) {
         result->statusCode = UA_STATUSCODE_BADREFERENCENOTALLOWED;
-        goto ret2;
+        return;
     }
 
     // todo: test if the referencetype is hierarchical
     // todo: namespace index is assumed to be valid
-    const UA_Node *managed = UA_NULL;
+    UA_MT_CONST UA_Node *managed = UA_NULL;
     UA_NodeId tempNodeid = node->nodeId;
     tempNodeid.namespaceIndex = 0;
     if(UA_NodeId_isNull(&tempNodeid)) {
         if(UA_NodeStore_insert(server->nodestore, node, &managed) != UA_STATUSCODE_GOOD) {
             result->statusCode = UA_STATUSCODE_BADOUTOFMEMORY;
-            goto ret2;
+            return;
         }
         result->addedNodeId = managed->nodeId; // cannot fail as unique nodeids are numeric
     } else {
         if(UA_NodeId_copy(&node->nodeId, &result->addedNodeId) != UA_STATUSCODE_GOOD) {
             result->statusCode = UA_STATUSCODE_BADOUTOFMEMORY;
-            goto ret2;
+            return;
         }
 
         if(UA_NodeStore_insert(server->nodestore, node, &managed) != UA_STATUSCODE_GOOD) {
             result->statusCode = UA_STATUSCODE_BADNODEIDEXISTS;
             UA_NodeId_deleteMembers(&result->addedNodeId);
-            goto ret2;
+            return;
         }
     }
     
@@ -75,12 +75,6 @@ void Service_AddNodes_single(UA_Server *server, UA_Session *session, UA_Node *no
     Service_AddReferences_single(server, session, &item);
 
     // todo: error handling. remove new node from nodestore
-    UA_NodeStore_release(managed);
-    
- ret2:
-    UA_NodeStore_release((const UA_Node*)referenceType);
- ret:
-    UA_NodeStore_release(parent);
 }
 
 static void moveStandardAttributes(UA_Node *node, UA_AddNodesItem *item, UA_NodeAttributes *attr) {
@@ -663,7 +657,6 @@ UA_StatusCode Service_DeleteNodes_single(UA_Server *server, UA_Session *session,
         UA_NodeId_init(&delItem.sourceNodeId);
         UA_DeleteReferencesItem_deleteMembers(&delItem);
     }
-    UA_NodeStore_release(node);
     return UA_NodeStore_remove(server->nodestore, &nodeId);
 }
 

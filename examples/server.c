@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
     myVar.description = UA_LOCALIZEDTEXT("en_US", "the answer");
     myVar.displayName = UA_LOCALIZEDTEXT("en_US", "the answer");
     UA_Int32 myInteger = 42;
-    UA_Variant_setScalarCopy(&myVar.value, &myInteger, &UA_TYPES[UA_TYPES_INT32]);
+    UA_Variant_setScalar(&myVar.value, &myInteger, &UA_TYPES[UA_TYPES_INT32]);
     const UA_QualifiedName myIntegerName = UA_QUALIFIEDNAME(1, "the answer");
     const UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, "the.answer");
     UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
