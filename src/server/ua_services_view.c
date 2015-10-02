@@ -4,9 +4,9 @@
 #include "ua_nodestore.h"
 #include "ua_util.h"
 
-static UA_StatusCode fillrefdescr(UA_NodeStore *ns, const UA_Node *curr, UA_ReferenceNode *ref,
-                                  UA_UInt32 mask, UA_ReferenceDescription *descr)
-{
+static UA_StatusCode
+fillrefdescr(UA_NodeStore *ns, const UA_Node *curr, UA_ReferenceNode *ref,
+             UA_UInt32 mask, UA_ReferenceDescription *descr) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     UA_ReferenceDescription_init(descr);
     retval |= UA_NodeId_copy(&curr->nodeId, &descr->nodeId.nodeId);
@@ -43,10 +43,10 @@ static UA_StatusCode fillrefdescr(UA_NodeStore *ns, const UA_Node *curr, UA_Refe
 
 /* Tests if the node is relevant to the browse request and shall be returned. If
    so, it is retrieved from the Nodestore. If not, null is returned. */
-static const UA_Node *relevant_node(UA_Server *server, UA_NodeStore *ns, const UA_BrowseDescription *descr,
-                                    UA_Boolean return_all, UA_ReferenceNode *reference,
-                                    UA_NodeId *relevant, size_t relevant_count, UA_Boolean *isExternal)
-{
+static const UA_Node
+*relevant_node(UA_Server *server, UA_NodeStore *ns, const UA_BrowseDescription *descr,
+               UA_Boolean return_all, UA_ReferenceNode *reference,
+               UA_NodeId *relevant, size_t relevant_count, UA_Boolean *isExternal) {
     if(reference->isInverse == UA_TRUE && descr->browseDirection == UA_BROWSEDIRECTION_FORWARD)
         return UA_NULL;
     else if(reference->isInverse == UA_FALSE && descr->browseDirection == UA_BROWSEDIRECTION_INVERSE)
@@ -146,8 +146,8 @@ is_relevant: ;
  * the array and increase the size. Since the hierarchy is not cyclic, we can safely progress in the
  * array to process the newly found referencetype nodeids (emulated recursion).
  */
-static UA_StatusCode findsubtypes(UA_NodeStore *ns, const UA_NodeId *root, UA_NodeId **reftypes,
-                                  size_t *reftypes_count) {
+static UA_StatusCode
+findsubtypes(UA_NodeStore *ns, const UA_NodeId *root, UA_NodeId **reftypes, size_t *reftypes_count) {
     const UA_Node *node = UA_NodeStore_get(ns, root);
     if(!node)
         return UA_STATUSCODE_BADNOMATCH;
@@ -204,7 +204,8 @@ static UA_StatusCode findsubtypes(UA_NodeStore *ns, const UA_NodeId *root, UA_No
     return UA_STATUSCODE_GOOD;
 }
 
-static void removeCp(struct ContinuationPointEntry *cp, UA_Session* session){
+static void
+removeCp(struct ContinuationPointEntry *cp, UA_Session* session) {
     session->availableContinuationPoints++;
     UA_ByteString_deleteMembers(&cp->identifier);
     UA_BrowseDescription_deleteMembers(&cp->browseDescription);
@@ -222,8 +223,9 @@ static void removeCp(struct ContinuationPointEntry *cp, UA_Session* session){
  * @param maxrefs The maximum number of references the client has requested
  * @param result The entry in the request
  */
-static void browse(UA_Server *server, UA_Session *session, UA_NodeStore *ns, struct ContinuationPointEntry *cp,
-                   const UA_BrowseDescription *descr, UA_UInt32 maxrefs, UA_BrowseResult *result) {
+static void
+browse(UA_Server *server, UA_Session *session, UA_NodeStore *ns, struct ContinuationPointEntry *cp,
+       const UA_BrowseDescription *descr, UA_UInt32 maxrefs, UA_BrowseResult *result) {
     UA_UInt32 continuationIndex = 0;
     size_t referencesCount = 0;
     UA_Int32 referencesIndex = 0;
@@ -305,7 +307,8 @@ static void browse(UA_Server *server, UA_Session *session, UA_NodeStore *ns, str
         if(skipped < continuationIndex) {
 #ifdef UA_EXTERNAL_NAMESPACES
         	if(isExternal == UA_TRUE){
-        		/*	relevant_node returns a node malloced with UA_ObjectNode_new if it is external (there is no UA_Node_new function)	*/
+        		/*	relevant_node returns a node malloced with UA_ObjectNode_new
+                    if it is external (there is no UA_Node_new function) */
         		UA_ObjectNode_delete((UA_ObjectNode*)current);
         	} else
 #endif
@@ -353,7 +356,8 @@ static void browse(UA_Server *server, UA_Session *session, UA_NodeStore *ns, str
         }
     } else if(maxrefs != 0 && referencesCount >= maxrefs) {
         /* create a cp */
-        if(session->availableContinuationPoints <= 0 || !(cp = UA_malloc(sizeof(struct ContinuationPointEntry)))) {
+        if(session->availableContinuationPoints <= 0 ||
+           !(cp = UA_malloc(sizeof(struct ContinuationPointEntry)))) {
             result->statusCode = UA_STATUSCODE_BADNOCONTINUATIONPOINTS;
             return;
         }
@@ -483,8 +487,7 @@ void Service_BrowseNext(UA_Server *server, UA_Session *session, const UA_BrowseN
 static UA_StatusCode
 walkBrowsePath(UA_Server *server, UA_Session *session, const UA_Node *node, const UA_RelativePath *path,
                UA_Int32 pathindex, UA_BrowsePathTarget **targets, UA_Int32 *targets_size,
-               UA_Int32 *target_count)
-{
+               UA_Int32 *target_count) {
     const UA_RelativePathElement *elem = &path->elements[pathindex];
     if(elem->targetName.name.length == -1)
         return UA_STATUSCODE_BADBROWSENAMEINVALID;
@@ -556,8 +559,9 @@ walkBrowsePath(UA_Server *server, UA_Session *session, const UA_Node *node, cons
     return retval;
 }
 
-static void translateBrowsePath(UA_Server *server, UA_Session *session, const UA_BrowsePath *path,
-                                UA_BrowsePathResult *result) {
+static void
+translateBrowsePath(UA_Server *server, UA_Session *session, const UA_BrowsePath *path,
+                    UA_BrowsePathResult *result) {
     if(path->relativePath.elementsSize <= 0) {
         result->statusCode = UA_STATUSCODE_BADNOTHINGTODO;
         return;
@@ -647,7 +651,8 @@ void Service_RegisterNodes(UA_Server *server, UA_Session *session, const UA_Regi
         response->responseHeader.serviceResult = UA_STATUSCODE_BADNOTHINGTODO;
     else {
         response->responseHeader.serviceResult =
-            UA_Array_copy(request->nodesToRegister, (void**)&response->registeredNodeIds, &UA_TYPES[UA_TYPES_NODEID],
+            UA_Array_copy(request->nodesToRegister, (void**)&response->registeredNodeIds,
+                          &UA_TYPES[UA_TYPES_NODEID],
                 request->nodesToRegisterSize);
         if(response->responseHeader.serviceResult == UA_STATUSCODE_GOOD)
             response->registeredNodeIdsSize = request->nodesToRegisterSize;

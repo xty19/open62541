@@ -409,12 +409,11 @@ UA_StatusCode UA_Server_editNode(UA_Server *server, UA_Session *session, const U
                                  UA_EditNodeCallback callback, const void *data) {
     UA_StatusCode retval;
     do {
-        retval = UA_STATUSCODE_GOOD;
-        const UA_Node *node = UA_NodeStore_get(server->nodestore, nodeId);
+        UA_MT_CONST UA_Node *node = UA_NodeStore_get(server->nodestore, nodeId);
         if(!node)
             return UA_STATUSCODE_BADNODEIDUNKNOWN;
 #ifndef UA_MULTITHREADING
-        retval = callback(server, session, (UA_Node*)(uintptr_t)node, data);
+        retval = callback(server, session, node, data);
         return retval;
 #else
         UA_Node *copy = UA_Node_copyAnyNodeClass(node);
