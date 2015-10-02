@@ -305,7 +305,6 @@ int main(int argc, char** argv) {
     UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
     UA_Server_addVariableNode(server, myIntegerNodeId, parentNodeId, parentReferenceNodeId,
                               myIntegerName, UA_NODEID_NULL, myVar);
-    UA_Variant_deleteMembers(&myVar.value);
 
     /**************/
     /* Demo Nodes */
