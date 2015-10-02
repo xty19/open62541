@@ -501,7 +501,6 @@ void MonitoredItem_QueuePushDataValue(UA_Server *server, UA_MonitoredItem *monit
   
     UA_Boolean samplingError = MonitoredItem_CopyMonitoredValueToVariant(monitoredItem->attributeID, target,
                                                                          &newvalue->value);
-    UA_NodeStore_release(target);
     if(samplingError != UA_FALSE || !newvalue->value.type) {
         UA_Variant_deleteMembers(&newvalue->value);
         UA_free(newvalue);
