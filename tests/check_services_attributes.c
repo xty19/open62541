@@ -34,7 +34,7 @@ static UA_Server* makeTestSequence(void) {
     UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
     UA_Server_addVariableNode(server, myIntegerNodeId, parentNodeId,
                               parentReferenceNodeId, myIntegerName,
-                              UA_NODEID_NULL, vattr);
+                              UA_NODEID_NULL, vattr, NULL);
 
     /* ObjectNode */
     UA_ObjectAttributes obj_attr;
@@ -46,7 +46,7 @@ static UA_Server* makeTestSequence(void) {
                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                             UA_QUALIFIEDNAME(1, "Demo"),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE),
-                            obj_attr);
+                            obj_attr, NULL);
 
     /* ViewNode */
     UA_ViewAttributes view_attr;
@@ -56,8 +56,9 @@ static UA_Server* makeTestSequence(void) {
     UA_Server_addViewNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_VIEWNODE),
                           UA_NODEID_NUMERIC(0, UA_NS0ID_VIEWSFOLDER),
                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-                          UA_QUALIFIEDNAME_ALLOC(0, "Viewtest"), view_attr);
+                          UA_QUALIFIEDNAME_ALLOC(0, "Viewtest"), view_attr, NULL);
 
+#ifdef ENABLE_METHODCALLS
 	/* MethodNode */
     UA_MethodAttributes ma;
     UA_MethodAttributes_init(&ma);
@@ -67,7 +68,8 @@ static UA_Server* makeTestSequence(void) {
                             UA_NODEID_NUMERIC(0, 3),
                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
                             UA_QUALIFIEDNAME_ALLOC(0, "Methodtest"), ma,
-                            NULL, NULL, -1, NULL, -1, NULL);
+                            NULL, NULL, -1, NULL, -1, NULL, NULL);
+#endif
 
 	return server;
 }
@@ -352,6 +354,7 @@ START_TEST(ReadSingleAttributeEventNotifierWithoutTimestamp) {
     rReq.nodesToRead[0].nodeId = UA_NODEID_NUMERIC(1, 50);
     rReq.nodesToRead[0].attributeId = UA_ATTRIBUTEID_EVENTNOTIFIER;
     Service_Read_single(server, &adminSession, UA_TIMESTAMPSTORETURN_NEITHER, &rReq.nodesToRead[0], &resp);
+    ck_assert_int_eq(UA_STATUSCODE_GOOD, resp.status);
     ck_assert_int_eq(-1, resp.value.arrayLength);
     ck_assert_ptr_eq(&UA_TYPES[UA_TYPES_BYTE],resp.value.type);
     ck_assert_int_eq(*(UA_Byte*)resp.value.data, 0);
@@ -502,6 +505,7 @@ START_TEST(ReadSingleAttributeHistorizingWithoutTimestamp) {
 } END_TEST
 
 START_TEST(ReadSingleAttributeExecutableWithoutTimestamp) {
+#ifdef ENABLE_METHODCALLS
     UA_Server *server = makeTestSequence();
     UA_DataValue resp;
     UA_DataValue_init(&resp);
@@ -518,9 +522,11 @@ START_TEST(ReadSingleAttributeExecutableWithoutTimestamp) {
     UA_DataValue_deleteMembers(&resp);
     UA_ReadRequest_deleteMembers(&rReq);
     UA_Server_delete(server);
+#endif
 } END_TEST
 
 START_TEST(ReadSingleAttributeUserExecutableWithoutTimestamp) {
+#ifdef ENABLE_METHODCALLS
     UA_Server *server = makeTestSequence();
     UA_DataValue resp;
     UA_DataValue_init(&resp);
@@ -537,6 +543,7 @@ START_TEST(ReadSingleAttributeUserExecutableWithoutTimestamp) {
     UA_DataValue_deleteMembers(&resp);
     UA_ReadRequest_deleteMembers(&rReq);
     UA_Server_delete(server);
+#endif
 } END_TEST
 
 /* Tests for writeValue method */
@@ -951,8 +958,7 @@ int main(void) {
 	Suite *s;
 	s = testSuite_services_attributes();
 	SRunner *sr = srunner_create(s);
-	srunner_set_log(sr, "test.log");
-	srunner_set_fork_status(sr, CK_NOFORK);
+	// srunner_set_fork_status(sr, CK_NOFORK);
 	srunner_run_all(sr, CK_NORMAL);
 
 	number_failed += srunner_ntests_failed(sr);

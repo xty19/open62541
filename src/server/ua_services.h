@@ -108,11 +108,8 @@ void Service_CloseSession(UA_Server *server, UA_Session *session, const UA_Close
 /** Used to add one or more Nodes into the AddressSpace hierarchy. */
 void Service_AddNodes(UA_Server *server, UA_Session *session, const UA_AddNodesRequest *request,
                       UA_AddNodesResponse *response);
-void Service_AddNodes_single(UA_Server *server, UA_Session *session, UA_Node *node,
-                             const UA_NodeId *parentNodeId, const UA_NodeId *referenceTypeId,
-                             UA_AddNodesResult *result);
-void Service_AddNodes_single_fromAttributes(UA_Server *server, UA_Session *session, UA_AddNodesItem *item,
-                                            UA_NodeAttributes *attr, const UA_DataType *attributeType, UA_AddNodesResult *result);
+void Service_AddNodes_single(UA_Server *server, UA_Session *session, UA_AddNodesItem *item,
+                             UA_NodeAttributes *attr, UA_AddNodesResult *result);
 
 /** Used to add one or more References to one or more Nodes. */
 void Service_AddReferences(UA_Server *server, UA_Session *session, const UA_AddReferencesRequest *request,
@@ -123,7 +120,7 @@ UA_StatusCode Service_AddReferences_single(UA_Server *server, UA_Session *sessio
 /** Used to delete one or more Nodes from the AddressSpace. */
 void Service_DeleteNodes(UA_Server *server, UA_Session *session, const UA_DeleteNodesRequest *request,
                          UA_DeleteNodesResponse *response);
-UA_StatusCode Service_DeleteNodes_single(UA_Server *server, UA_Session *session, UA_NodeId nodeId,
+UA_StatusCode Service_DeleteNodes_single(UA_Server *server, UA_Session *session, UA_NodeId *nodeId,
                                          UA_Boolean deleteReferences);
 
 /** Used to delete one or more References of a Node. */
@@ -150,6 +147,9 @@ UA_StatusCode Service_DeleteReferences_single(UA_Server *server, UA_Session *ses
  */
 void Service_Browse(UA_Server *server, UA_Session *session, const UA_BrowseRequest *request,
                     UA_BrowseResponse *response);
+
+void Service_Browse_single(UA_Server *server, UA_Session *session, struct ContinuationPointEntry *cp,
+                           const UA_BrowseDescription *descr, UA_UInt32 maxrefs, UA_BrowseResult *result);
 
 /**
  * Used to request the next set of Browse or BrowseNext response information

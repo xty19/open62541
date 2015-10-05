@@ -84,8 +84,8 @@ UA_StatusCode UA_EXPORT UA_Server_run_mainloop(UA_Server *server, UA_Boolean *ru
  *        the pointer is null, the guid is not set.
  * @return Upon success, UA_STATUSCODE_GOOD is returned. An error code otherwise.
  */
-UA_StatusCode UA_EXPORT UA_Server_addRepeatedJob(UA_Server *server, UA_Job job, UA_UInt32 interval,
-                                                 UA_Guid *jobId);
+UA_StatusCode UA_EXPORT UA_Server_addRepeatedJob(UA_Server *server, UA_Job job,
+                                                 UA_UInt32 interval, UA_Guid *jobId);
 
 /**
  * Remove repeated job. The entry will be removed asynchronously during the next iteration of the
@@ -212,98 +212,102 @@ typedef struct {
 /** Add a reference to the server's address space */
 UA_StatusCode UA_EXPORT
 UA_Server_addReference(UA_Server *server, const UA_NodeId sourceId, const UA_NodeId refTypeId,
-                       const UA_ExpandedNodeId targetId);
+                       const UA_ExpandedNodeId targetId, UA_Boolean isForward);
 
 /* Don't use this function. There are typed versions as inline functions. */
-UA_AddNodesResult UA_EXPORT
+UA_StatusCode UA_EXPORT
 UA_Server_addNode(UA_Server *server, const UA_NodeClass nodeClass, const UA_NodeId requestedNewNodeId,
                   const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
                   const UA_QualifiedName browseName, const UA_NodeId typeDefinition,
-                  const UA_NodeAttributes *attr, const UA_DataType *attributeType);
+                  const UA_NodeAttributes *attr, const UA_DataType *attributeType, UA_NodeId *outNewNodeId);
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addVariableNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                           const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
                           const UA_QualifiedName browseName, const UA_NodeId typeDefinition,
-                          const UA_VariableAttributes attr) {
+                          const UA_VariableAttributes attr, UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_VARIABLE, requestedNewNodeId, parentNodeId,
                              referenceTypeId, browseName, typeDefinition, (const UA_NodeAttributes*)&attr,
-                             &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES]); }
+                             &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES], outNewNodeId); }
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addVariableTypeNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                               const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
-                              const UA_QualifiedName browseName, const UA_VariableTypeAttributes attr) {
+                              const UA_QualifiedName browseName, const UA_VariableTypeAttributes attr,
+                              UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_VARIABLETYPE, requestedNewNodeId, parentNodeId,
-                             referenceTypeId, browseName, UA_NODEID_NULL,
-                             (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLETYPEATTRIBUTES]); }
+                             referenceTypeId, browseName, UA_NODEID_NULL, (const UA_NodeAttributes*)&attr,
+                             &UA_TYPES[UA_TYPES_VARIABLETYPEATTRIBUTES], outNewNodeId); }
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addObjectNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                         const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
                         const UA_QualifiedName browseName, const UA_NodeId typeDefinition,
-                        const UA_ObjectAttributes attr) {
+                        const UA_ObjectAttributes attr, UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_OBJECT, requestedNewNodeId, parentNodeId,
                              referenceTypeId, browseName, typeDefinition, (const UA_NodeAttributes*)&attr,
-                             &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES]); }
+                             &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES], outNewNodeId); }
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addObjectTypeNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                             const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
-                            const UA_QualifiedName browseName, const UA_ObjectTypeAttributes attr) {
+                            const UA_QualifiedName browseName, const UA_ObjectTypeAttributes attr,
+                            UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_OBJECTTYPE, requestedNewNodeId, parentNodeId,
-                             referenceTypeId, browseName, UA_NODEID_NULL,
-                             (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTTYPEATTRIBUTES]); }
+                             referenceTypeId, browseName, UA_NODEID_NULL, (const UA_NodeAttributes*)&attr,
+                             &UA_TYPES[UA_TYPES_OBJECTTYPEATTRIBUTES], outNewNodeId); }
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addViewNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                       const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
-                      const UA_QualifiedName browseName, const UA_ViewAttributes attr) {
+                      const UA_QualifiedName browseName, const UA_ViewAttributes attr,
+                      UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_VIEW, requestedNewNodeId, parentNodeId,
-                             referenceTypeId, browseName, UA_NODEID_NULL,
-                             (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VIEWATTRIBUTES]); }
+                             referenceTypeId, browseName, UA_NODEID_NULL, (const UA_NodeAttributes*)&attr,
+                             &UA_TYPES[UA_TYPES_VIEWATTRIBUTES], outNewNodeId); }
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addReferenceTypeNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                                const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
-                               const UA_QualifiedName browseName, const UA_ReferenceTypeAttributes attr) {
+                               const UA_QualifiedName browseName, const UA_ReferenceTypeAttributes attr,
+                               UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_REFERENCETYPE, requestedNewNodeId, parentNodeId,
-                             referenceTypeId, browseName, UA_NODEID_NULL,
-                             (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_REFERENCETYPEATTRIBUTES]); }
+                             referenceTypeId, browseName, UA_NODEID_NULL, (const UA_NodeAttributes*)&attr,
+                             &UA_TYPES[UA_TYPES_REFERENCETYPEATTRIBUTES], outNewNodeId); }
 
-static UA_INLINE UA_AddNodesResult
+static UA_INLINE UA_StatusCode
 UA_Server_addDataTypeNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                           const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
-                          const UA_QualifiedName browseName, const UA_DataTypeAttributes attr) {
+                          const UA_QualifiedName browseName, const UA_DataTypeAttributes attr,
+                          UA_NodeId *outNewNodeId) {
     return UA_Server_addNode(server, UA_NODECLASS_DATATYPE, requestedNewNodeId, parentNodeId,
-                             referenceTypeId, browseName, UA_NODEID_NULL,
-                             (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_DATATYPEATTRIBUTES]); }
+                             referenceTypeId, browseName, UA_NODEID_NULL, (const UA_NodeAttributes*)&attr,
+                             &UA_TYPES[UA_TYPES_DATATYPEATTRIBUTES], outNewNodeId); }
 
-UA_AddNodesResult UA_EXPORT
+UA_StatusCode UA_EXPORT
 UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                                     const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
                                     const UA_QualifiedName browseName, const UA_NodeId typeDefinition,
-                                    const UA_VariableAttributes attr, const UA_DataSource dataSource);
-
-UA_StatusCode UA_EXPORT
-UA_Server_addMonodirectionalReference(UA_Server *server, UA_NodeId sourceNodeId, UA_NodeId targetNodeId,
-                                      UA_NodeId referenceTypeId, UA_Boolean isforward);
+                                    const UA_VariableAttributes attr, const UA_DataSource dataSource,
+                                    UA_NodeId *outNewNodeId);
 
 #ifdef ENABLE_METHODCALLS
 typedef UA_StatusCode (*UA_MethodCallback)(const UA_NodeId objectId, const UA_Variant *input,
                                            UA_Variant *output, void *handle);
-UA_AddNodesResult UA_EXPORT
+UA_StatusCode UA_EXPORT
 UA_Server_addMethodNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                         const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
                         const UA_QualifiedName browseName, const UA_MethodAttributes attr,
                         UA_MethodCallback method, void *handle,
                         UA_Int32 inputArgumentsSize, const UA_Argument* inputArguments, 
-                        UA_Int32 outputArgumentsSize, const UA_Argument* outputArguments);
+                        UA_Int32 outputArgumentsSize, const UA_Argument* outputArguments,
+                        UA_NodeId *outNewNodeId);
 #endif
 
 UA_StatusCode UA_EXPORT UA_Server_deleteNode(UA_Server *server, UA_NodeId nodeId);
 
-typedef UA_StatusCode (*UA_NodeIteratorCallback) (UA_NodeId childId, UA_Boolean isInverse, UA_NodeId referenceTypeId, void *handle);
+typedef UA_StatusCode (*UA_NodeIteratorCallback) (UA_NodeId childId, UA_Boolean isInverse,
+                                                  UA_NodeId referenceTypeId, void *handle);
 
 /** Iterate over all nodes referenced by parentNodeId by calling the callback function for each
  * child node
@@ -317,7 +321,8 @@ typedef UA_StatusCode (*UA_NodeIteratorCallback) (UA_NodeId childId, UA_Boolean 
  * @return Upon success, UA_STATUSCODE_GOOD is returned. An error code otherwise.
  */
 UA_StatusCode UA_EXPORT
-UA_Server_forEachChildNodeCall(UA_Server *server, UA_NodeId parentNodeId, UA_NodeIteratorCallback callback, void *handle);
+UA_Server_forEachChildNodeCall(UA_Server *server, UA_NodeId parentNodeId,
+                               UA_NodeIteratorCallback callback, void *handle);
 
 /***********************/
 /* Set Node Attributes */
@@ -345,7 +350,7 @@ UA_Server_forEachChildNodeCall(UA_Server *server, UA_NodeId parentNodeId, UA_Nod
 
 UA_StatusCode UA_EXPORT
 UA_Server_setNodeAttribute_value(UA_Server *server, const UA_NodeId nodeId,
-                                 const UA_DataType *type, const UA_Variant *value);
+                                 const UA_DataType *type, const UA_Variant value);
 
 /* The value is moved into the node (not copied). The value variant is _inited internally. */
 UA_StatusCode UA_EXPORT
@@ -367,47 +372,73 @@ UA_Server_setNodeAttribute(UA_Server *server, const UA_NodeId nodeId, const UA_A
                            const UA_DataType *type, const void *value);
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_browseName(UA_Server *server, const UA_NodeId nodeId, const UA_QualifiedName *browseName) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_BROWSENAME, &UA_TYPES[UA_TYPES_QUALIFIEDNAME], browseName); }
+UA_Server_setNodeAttribute_browseName(UA_Server *server, const UA_NodeId nodeId,
+                                      const UA_QualifiedName browseName) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_BROWSENAME,
+                                      &UA_TYPES[UA_TYPES_QUALIFIEDNAME], &browseName); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_displayName(UA_Server *server, const UA_NodeId nodeId, const UA_LocalizedText *displayName) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_DISPLAYNAME, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], displayName); }
+UA_Server_setNodeAttribute_displayName(UA_Server *server, const UA_NodeId nodeId,
+                                       const UA_LocalizedText displayName) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_DISPLAYNAME,
+                                      &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &displayName); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_description(UA_Server *server, const UA_NodeId nodeId, const UA_LocalizedText *description) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_DESCRIPTION, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], description); }
+UA_Server_setNodeAttribute_description(UA_Server *server, const UA_NodeId nodeId,
+                                       const UA_LocalizedText description) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_DESCRIPTION,
+                                      &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &description); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_isAbstract(UA_Server *server, const UA_NodeId nodeId, const UA_Boolean *isAbstract) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_ISABSTRACT, &UA_TYPES[UA_TYPES_BOOLEAN], isAbstract); }
+UA_Server_setNodeAttribute_isAbstract(UA_Server *server, const UA_NodeId nodeId,
+                                      const UA_Boolean isAbstract) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_ISABSTRACT,
+                                      &UA_TYPES[UA_TYPES_BOOLEAN], &isAbstract); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_inverseName(UA_Server *server, const UA_NodeId nodeId, const UA_LocalizedText *inverseName) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_INVERSENAME, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], inverseName); }
+UA_Server_setNodeAttribute_inverseName(UA_Server *server, const UA_NodeId nodeId,
+                                       const UA_LocalizedText inverseName) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_INVERSENAME,
+                                      &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &inverseName); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_containtsNoLoops(UA_Server *server, const UA_NodeId nodeId, const UA_Boolean *containsNoLoops) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_CONTAINSNOLOOPS, &UA_TYPES[UA_TYPES_BOOLEAN], containsNoLoops); }
+UA_Server_setNodeAttribute_containtsNoLoops(UA_Server *server, const UA_NodeId nodeId,
+                                            const UA_Boolean containsNoLoops) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_CONTAINSNOLOOPS,
+                                      &UA_TYPES[UA_TYPES_BOOLEAN], &containsNoLoops); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_eventNotifier(UA_Server *server, const UA_NodeId nodeId, const UA_Byte *eventNotifier) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_EVENTNOTIFIER, &UA_TYPES[UA_TYPES_BYTE], eventNotifier); }
+UA_Server_setNodeAttribute_eventNotifier(UA_Server *server, const UA_NodeId nodeId,
+                                         const UA_Byte eventNotifier) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_EVENTNOTIFIER,
+                                      &UA_TYPES[UA_TYPES_BYTE], &eventNotifier); }
 
 static UA_INLINE UA_StatusCode
 UA_Server_setNodeAttribute_minimumSamplingInterval(UA_Server *server, const UA_NodeId nodeId,
-                                                   const UA_Double *miniumSamplingInterval) {
+                                                   const UA_Double miniumSamplingInterval) {
     return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL,
-                                      &UA_TYPES[UA_TYPES_DOUBLE], miniumSamplingInterval); }
+                                      &UA_TYPES[UA_TYPES_DOUBLE], &miniumSamplingInterval); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_setNodeAttribute_executable(UA_Server *server, const UA_NodeId nodeId, const UA_Boolean *executable) {
-    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_EXECUTABLE, &UA_TYPES[UA_TYPES_BOOLEAN], executable); }
+UA_Server_setNodeAttribute_executable(UA_Server *server, const UA_NodeId nodeId,
+                                      const UA_Boolean executable) {
+    return UA_Server_setNodeAttribute(server, nodeId, UA_ATTRIBUTEID_EXECUTABLE,
+                                      &UA_TYPES[UA_TYPES_BOOLEAN], &executable); }
 
 #ifdef ENABLE_METHODCALLS
 UA_StatusCode UA_EXPORT
-UA_Server_setNodeAttribute_method(UA_Server *server, UA_NodeId methodNodeId, UA_MethodCallback method, void *handle);
+UA_Server_setNodeAttribute_method(UA_Server *server, UA_NodeId methodNodeId,
+                                  UA_MethodCallback method, void *handle);
 #endif
+
+typedef struct {
+    void * (*constructor)(const UA_NodeId instance); ///< Returns the instance handle attached to the node
+    void (*destructor)(const UA_NodeId instance, void *instanceHandle);
+} UA_ObjectInstanceManagement;
+
+UA_StatusCode UA_EXPORT
+UA_Server_setObjectInstanceManagement(UA_Server *server, UA_NodeId nodeId,
+                                      UA_ObjectInstanceManagement oim);
 
 /***********************/
 /* Get Node Attributes */
@@ -492,8 +523,10 @@ UA_Server_getNodeAttribute_accessLevel(UA_Server *server, UA_NodeId nodeId, UA_U
     return UA_Server_getNodeAttribute(server, nodeId, UA_ATTRIBUTEID_ACCESSLEVEL, outAccessLevel); }
 
 static UA_INLINE UA_StatusCode
-UA_Server_getNodeAttribute_minimumSamplingInterval(UA_Server *server, UA_NodeId nodeId, UA_Double *outMinimumSamplingInterval) {
-    return UA_Server_getNodeAttribute(server, nodeId, UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL, outMinimumSamplingInterval); }
+UA_Server_getNodeAttribute_minimumSamplingInterval(UA_Server *server, UA_NodeId nodeId,
+                                                   UA_Double *outMinimumSamplingInterval) {
+    return UA_Server_getNodeAttribute(server, nodeId, UA_ATTRIBUTEID_MINIMUMSAMPLINGINTERVAL,
+                                      outMinimumSamplingInterval); }
 
 static UA_INLINE UA_StatusCode
 UA_Server_getNodeAttribute_historizing(UA_Server *server, UA_NodeId nodeId, UA_Double *outHistorizing) {
@@ -582,7 +615,8 @@ typedef struct UA_ExternalNodeStore {
 
 #ifdef UA_EXTERNAL_NAMESPACES
 UA_StatusCode UA_EXPORT
-UA_Server_addExternalNamespace(UA_Server *server, UA_UInt16 namespaceIndex, const UA_String *url, UA_ExternalNodeStore *nodeStore);
+UA_Server_addExternalNamespace(UA_Server *server, UA_UInt16 namespaceIndex,
+                               const UA_String *url, UA_ExternalNodeStore *nodeStore);
 #endif /* UA_EXTERNAL_NAMESPACES*/
 /** @} */
 
