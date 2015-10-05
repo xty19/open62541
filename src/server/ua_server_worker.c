@@ -49,6 +49,7 @@
 */
 static void processJobs(UA_Server *server, UA_Job *jobs, UA_Int32 jobsSize) {
     for (UA_Int32 i = 0; i < jobsSize; i++) {
+        UA_RCU_LOCK();
         UA_Job *job = &jobs[i];
         switch(job->type) {
         case UA_JOBTYPE_NOTHING:
@@ -75,6 +76,7 @@ static void processJobs(UA_Server *server, UA_Job *jobs, UA_Int32 jobsSize) {
             UA_LOG_WARNING(server->logger, UA_LOGCATEGORY_SERVER, "Trying to execute a job of unknown type");
             break;
         }
+        UA_RCU_UNLOCK();
     }
 }
 

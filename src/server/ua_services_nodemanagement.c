@@ -561,6 +561,7 @@ UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId requested
                                     const UA_NodeId parentNodeId, const UA_NodeId referenceTypeId,
                                     const UA_QualifiedName browseName, const UA_NodeId typeDefinition,
                                     const UA_VariableAttributes attr, const UA_DataSource dataSource, UA_NodeId *outNewNodeId) {
+    UA_RCU_LOCK();
     UA_AddNodesResult result;
     UA_AddNodesResult_init(&result);
 
@@ -578,6 +579,7 @@ UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId requested
     if(result.statusCode != UA_STATUSCODE_GOOD) {
         UA_AddNodesItem_deleteMembers(&item);
         UA_VariableAttributes_deleteMembers(&attrCopy);
+        UA_RCU_UNLOCK();
         return result.statusCode;
     }
 
@@ -585,6 +587,7 @@ UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId requested
     if(!node) {
         UA_AddNodesItem_deleteMembers(&item);
         UA_VariableAttributes_deleteMembers(&attrCopy);
+        UA_RCU_UNLOCK();
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
@@ -609,6 +612,7 @@ UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId requested
         *outNewNodeId = result.addedNodeId;
     else
         UA_AddNodesResult_deleteMembers(&result);
+    UA_RCU_UNLOCK();
     return result.statusCode;
 }
 
@@ -621,6 +625,7 @@ UA_Server_addMethodNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
                         UA_Int32 inputArgumentsSize, const UA_Argument* inputArguments, 
                         UA_Int32 outputArgumentsSize, const UA_Argument* outputArguments,
                         UA_NodeId *outNewNodeId) {
+    UA_RCU_LOCK();
     UA_AddNodesResult result;
     UA_AddNodesResult_init(&result);
     
@@ -637,6 +642,7 @@ UA_Server_addMethodNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
     if(result.statusCode != UA_STATUSCODE_GOOD) {
         UA_AddNodesItem_deleteMembers(&item);
         UA_MethodAttributes_deleteMembers(&attrCopy);
+        UA_RCU_UNLOCK();
         return result.statusCode;
     }
 
@@ -645,6 +651,7 @@ UA_Server_addMethodNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
         result.statusCode = UA_STATUSCODE_BADOUTOFMEMORY;
         UA_AddNodesItem_deleteMembers(&item);
         UA_MethodAttributes_deleteMembers(&attrCopy);
+        UA_RCU_UNLOCK();
         return result.statusCode;
     }
     
@@ -702,6 +709,7 @@ UA_Server_addMethodNode(UA_Server *server, const UA_NodeId requestedNewNodeId,
         *outNewNodeId = result.addedNodeId;
     else
         UA_AddNodesResult_deleteMembers(&result);
+    UA_RCU_UNLOCK();
     return result.statusCode;
 }
 #endif

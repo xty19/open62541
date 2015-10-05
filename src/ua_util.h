@@ -118,7 +118,12 @@
 # include <urcu/wfcqueue.h>
 # include <urcu/uatomic.h>
 # include <urcu/rculfhash.h>
-#include <urcu/lfstack.h>
+# include <urcu/lfstack.h>
+# define UA_RCU_LOCK() rcu_read_lock()
+# define UA_RCU_UNLOCK() rcu_read_unlock()
+#else
+# define UA_RCU_LOCK()
+# define UA_RCU_UNLOCK()
 #endif
 
 #endif /* UA_UTIL_H_ */

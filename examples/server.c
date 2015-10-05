@@ -453,6 +453,5 @@ int main(int argc, char** argv) {
 #ifdef UA_MULTITHREADING
     pthread_rwlock_destroy(&writeLock);
 #endif
-
     return retval;
 }

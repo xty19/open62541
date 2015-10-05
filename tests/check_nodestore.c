@@ -270,17 +270,19 @@ static void *profileGetThread(void *arg) {
 	struct UA_NodeStoreProfileTest *test = (struct UA_NodeStoreProfileTest*) arg;
 	UA_NodeId id;
     UA_NodeId_init(&id);
-	const UA_Node *cn;
 	UA_Int32 max_val = test->max_val;
 	UA_NodeStore *ns = test->ns;
+    int i = 0;
 	for(UA_Int32 x = 0; x<test->rounds; x++) {
 		for (UA_Int32 i=test->min_val; i<max_val; i++) {
 			id.identifier.numeric = i;
-			cn = UA_NodeStore_get(ns,&id);
+            const UA_Node *cn = UA_NodeStore_get(ns,&id);
+            if(cn)
+                i++;
 		}
 	}
 	rcu_unregister_thread();
-	
+	ck_assert(i > 0);
 	return UA_NULL;
 }
 #endif

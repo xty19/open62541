@@ -38,7 +38,8 @@ typedef struct UA_NodeStore UA_NodeStore;
 /** Create a new nodestore */
 UA_NodeStore * UA_NodeStore_new(void);
 
-/** Delete the nodestore and all nodes in it */
+/** Delete the nodestore and all nodes in it. Do not call from a read-side
+    critical section (multithreading). */
 void UA_NodeStore_delete(UA_NodeStore *ns);
 
 /**
