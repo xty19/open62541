@@ -1451,39 +1451,38 @@ START_TEST(longjmptest) {
     // given
     UA_String src;
     src.length = 11;
-    UA_Byte   mem[11] = "ACPLT OPCUA";
-    src.data   = mem;
+    UA_Byte mem[11] = "ACPLT OPCUA";
+    src.data = mem;
 
     //encoded size is 11+4 = 15
 
-    UA_Byte data[] = {  0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+    UA_Byte data[] = { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
     UA_ByteString dst = { 8, data };
 
     UA_StatusCode  retval  = 0;
     size_t pos     = 0;
+    volatile int arrival = 0;
 
-    //CASE 1: enable encoder resume - encoder will resume 2 times
-    pos = 0;
-    UA_encodeEnableResume();
-    if(!setjmp(jmp_return)){
-        retval = UA_String_encodeBinary(&src, &dst, &pos); //retval is invalid
-    }else{
-        //"return of the encoder"
-        ck_assert_int_eq(pos, sizeof(UA_Int32)+4);
-        ck_assert_int_eq(dst.data[0], 11);
-        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+0], 'A');
-        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+1], 'C');
-        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+2], 'P');
-        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+3], 'L');
-    }
-
-    //resume the encoding -- this can happen multiple times
-    while(UA_encodeReinitBuffer(&dst, &pos) == UA_STATUSCODE_GOODCALLAGAIN){
-        if(!setjmp(jmp_return)){
-            pos=0;
-            longjmp(jmp_buffer, 1);
-        }else{
-            //"return of the encoder"
+    int jumped = setjmp(jmp_return);
+    if(!jumped) {
+        /* the first time */
+        // Important!! Increase the size of the current frame, but don't tell
+        // jmp_return. That way, ck_assert_int_eq is called assuming the small
+        // frame. So the ck_assert_int_eq functions don't overwrite the stack
+        // from UA_encodeBinaryWithChunking, that we will need again.
+        UA_alloca(1<<12);
+        retval = UA_encodeBinaryWithChunking(&src, &UA_TYPES[UA_TYPES_STRING], &dst, &pos);
+    } else {
+        /* unit test only, check the status */
+        arrival++;
+        if(arrival == 1) {
+            ck_assert_int_eq(pos, sizeof(UA_Int32)+4);
+            ck_assert_int_eq(dst.data[0], 11);
+            ck_assert_int_eq(dst.data[sizeof(UA_Int32)+0], 'A');
+            ck_assert_int_eq(dst.data[sizeof(UA_Int32)+1], 'C');
+            ck_assert_int_eq(dst.data[sizeof(UA_Int32)+2], 'P');
+            ck_assert_int_eq(dst.data[sizeof(UA_Int32)+3], 'L');
+        } else if(arrival == 2) {
             ck_assert_int_eq(pos, 7);
             ck_assert_int_eq(dst.data[0], 'T');
             ck_assert_int_eq(dst.data[1], 0x20);
@@ -1493,49 +1492,15 @@ START_TEST(longjmptest) {
             ck_assert_int_eq(dst.data[5], 'U');
             ck_assert_int_eq(dst.data[6], 'A');
         }
+        /* send the message and replace the buffer (omitted here) */
+        /* reset the offset */
+        pos = 0;
+        // jumpcode 1 -> continue encoding, jumpcode > 1 -> unwind encoding with
+        // the jumpcode as statuscode. But we can also return directly from this
+        // function with the statuscode (no stack unwinding).
+        longjmp(jmp_buffer, 1);
     }
-    UA_encodeDisableResume();
-
-    //CASE 2: no encoder resume enabled - break after the integer since the array does not fit in
-    // when
-    pos=0;
-    retval = UA_String_encodeBinary(&src, &dst, &pos);
-    // then
-    ck_assert_int_eq(pos, sizeof(UA_Int32));
-    ck_assert_int_eq(dst.data[0], 11);
-    ck_assert_int_eq(retval, UA_STATUSCODE_BADENCODINGERROR);
-
-    //CASE 3: enable encoder resume - encoder will resume 3 times
-    pos = 0;
-    dst.length = 5;
-    UA_encodeEnableResume();
-    if(!setjmp(jmp_return)){
-        retval = UA_String_encodeBinary(&src, &dst, &pos); //retval is invalid
-    }else{
-        //"return of the encoder"
-        ck_assert_int_eq(pos, sizeof(UA_Int32)+1);
-        ck_assert_int_eq(dst.data[0], 11);
-        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+0], 'A');
-    }
-
-    int i = 0;
-    //resume the encoding -- this can happen multiple times
-    while(UA_encodeReinitBuffer(&dst, &pos) == UA_STATUSCODE_GOODCALLAGAIN){
-        if(!setjmp(jmp_return)){
-            pos=0;
-            longjmp(jmp_buffer, 1);
-        }else{
-            i++;
-        }
-    }
-    UA_encodeDisableResume();
-    ck_assert_int_eq(i, 2); //resumed two times
-    ck_assert_int_eq(pos, 5);
-    ck_assert_int_eq(dst.data[0], 'O');
-    ck_assert_int_eq(dst.data[1], 'P');
-    ck_assert_int_eq(dst.data[2], 'C');
-    ck_assert_int_eq(dst.data[3], 'U');
-    ck_assert_int_eq(dst.data[4], 'A');
+    ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
 }
 END_TEST
 

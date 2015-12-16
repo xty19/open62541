@@ -4,13 +4,8 @@
 #include "ua_types_generated.h"
 
 /* Infrastructure for long jumps */
-jmp_buf *j_return = NULL;
 jmp_buf jmp_return;
-
-jmp_buf *j_buffer = NULL;
 jmp_buf jmp_buffer;
-volatile UA_ByteString *jmp_dst;
-volatile size_t *jmp_offset;
 
 /* All de- and encoding functions have the same signature up to the pointer type.
    So we can use a jump-table to switch into member types. */
@@ -280,32 +275,12 @@ Double_encodeBinary(UA_Double const *src, const UA_DataType *_,
 }
 #endif /* UA_MIXED_ENDIAN */
 
-//FIXME: temporary placed
-void UA_encodeEnableResume(void){
-    j_return = &jmp_return;
-}
-
-void UA_encodeDisableResume(void){
-    j_return = NULL;
-}
-
-UA_StatusCode UA_encodeReinitBuffer(UA_ByteString *dst, size_t *UA_RESTRICT offset){
-    jmp_dst = dst;
-    jmp_offset = offset;
-    if(j_buffer==NULL){
-        return UA_STATUSCODE_GOOD;
-    }else{
-        return UA_STATUSCODE_GOODCALLAGAIN;
-    }
-}
-
-
 /******************/
 /* Array Handling */
 /******************/
 static UA_StatusCode
 Array_encodeBinary(const void *src, size_t length, const UA_DataType *type,
-                   UA_ByteString *dst, size_t *UA_RESTRICT offset) {
+                   UA_ByteString *volatile dst, size_t *offset) {
     UA_Int32 signed_length = -1;
     if(length > 0)
         signed_length = length;
@@ -318,42 +293,29 @@ Array_encodeBinary(const void *src, size_t length, const UA_DataType *type,
 #ifndef UA_NON_LITTLEENDIAN_ARCHITECTURE
     if(type->zeroCopyable) {
 
-        size_t partialLength = 0;
-        //the complete array does not fit in
-compare:
-        if(dst->length - *offset <  (type->memSize * length)){
-            if(!*j_return)
-                return UA_STATUSCODE_BADENCODINGERROR;
-            partialLength = (dst->length - *offset) / type->memSize;
-            //printf("partial memcpy: %zu\n", partialLength);
-            memcpy(&dst->data[*offset], src, type->memSize * partialLength);
-            *offset += type->memSize * partialLength;
-            length -= partialLength;
-            src = (void*)((uintptr_t)src+(type->memSize * partialLength));
-            j_buffer = &jmp_buffer;
-            if(setjmp(*j_buffer)){
-                //printf("--encoder resumed\n");
-                //reinit stuff
-                dst = (UA_ByteString*)(uintptr_t)jmp_dst;
-                offset = (size_t*)(uintptr_t)jmp_offset;
-                goto compare;
-            }else{
-                //printf("--encoder suspended\n");
-                //jump back
-                longjmp(*j_return, 1);
-            }
+        /* don't clobber these values */
+        volatile size_t partialLength = 0;
+        int jumpcode = setjmp(jmp_buffer);
+
+        /* error message from the buffer replacement for unwinding */
+        if(jumpcode > 1)
+            return jumpcode;
+
+        size_t encodable = length - partialLength;
+        uintptr_t srcp = (uintptr_t)src + partialLength * type->memSize;
+        if(dst->length - *offset >= encodable * type->memSize) {
+            /* enough space */
+            memcpy(&dst->data[*offset], (void*)srcp, encodable*type->memSize);
+            *offset += encodable * type->memSize;
+        } else {
+            /* the complete array does not fit in */
+            encodable = (dst->length - *offset) / type->memSize;
+            partialLength += encodable;
+            memcpy(&dst->data[*offset], (void*)srcp, encodable*type->memSize);
+            *offset += type->memSize * encodable;
+            longjmp(jmp_return, 1);
         }
-        //printf("non-partial memcpy: %zu\n", length);
-        memcpy(&dst->data[*offset], src, type->memSize * length);
-        *offset += type->memSize * length;
-        //printf("--returning good\n");
-        if(!*j_return)
-            return UA_STATUSCODE_GOOD;
-        else{
-            //jump back
-            j_buffer = NULL;
-            longjmp(*j_return, 1);
-        }
+        return UA_STATUSCODE_GOOD;
     }
 #endif
 
@@ -1076,17 +1038,18 @@ static const UA_encodeBinarySignature encodeBinaryJumpTable[UA_BUILTIN_TYPES_COU
     (UA_encodeBinarySignature)NodeId_encodeBinary,
     (UA_encodeBinarySignature)ExpandedNodeId_encodeBinary,
     (UA_encodeBinarySignature)UInt32_encodeBinary, // StatusCode
-    (UA_encodeBinarySignature)UA_encodeBinary, // QualifiedName
+    (UA_encodeBinarySignature)UA_encodeBinaryWithChunking, // QualifiedName
     (UA_encodeBinarySignature)LocalizedText_encodeBinary,
     (UA_encodeBinarySignature)ExtensionObject_encodeBinary,
     (UA_encodeBinarySignature)DataValue_encodeBinary,
     (UA_encodeBinarySignature)Variant_encodeBinary,
     (UA_encodeBinarySignature)DiagnosticInfo_encodeBinary,
-    (UA_encodeBinarySignature)UA_encodeBinary,
+    (UA_encodeBinarySignature)UA_encodeBinaryWithChunking,
 };
 
 UA_StatusCode
-UA_encodeBinary(const void *src, const UA_DataType *type, UA_ByteString *dst, size_t *UA_RESTRICT offset) {
+UA_encodeBinaryWithChunking(const void *src, const UA_DataType *type, UA_ByteString *dst,
+                            size_t *UA_RESTRICT offset) {
     uintptr_t ptr = (uintptr_t)src;
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     UA_Byte membersSize = type->membersSize;
@@ -1108,6 +1071,14 @@ UA_encodeBinary(const void *src, const UA_DataType *type, UA_ByteString *dst, si
         }
     }
     return retval;
+}
+
+UA_StatusCode
+UA_encodeBinary(const void *src, const UA_DataType *type, UA_ByteString *dst,
+                size_t *UA_RESTRICT offset) {
+    if(setjmp(jmp_return) != 0)
+        return UA_STATUSCODE_BADENCODINGERROR; /* leave without unwinding the stack */
+    return UA_encodeBinaryWithChunking(src, type, dst, offset);
 }
 
 static UA_StatusCode
