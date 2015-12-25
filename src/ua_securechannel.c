@@ -135,7 +135,8 @@ UA_StatusCode UA_SecureChannel_sendBinaryMessage(UA_SecureChannel *channel, UA_U
 
     size_t messagePos = 24; // after the headers
     retval |= UA_NodeId_encodeBinary(&typeId, &message, &messagePos);
-    retval |= UA_encodeBinary(content, contentType, &message, &messagePos);
+    size_t skip = 0;
+    retval |= UA_encodeBinary(content, contentType, &message, &messagePos, &skip);
 
     if(retval != UA_STATUSCODE_GOOD) {
         connection->releaseSendBuffer(connection, &message);
