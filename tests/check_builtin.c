@@ -1424,6 +1424,107 @@ START_TEST(UA_ExtensionObject_encodeDecodeShallWorkOnExtensionObject) {
 }
 END_TEST
 
+START_TEST(longjmptest) {
+    /*will not work on non little-endian */
+    // given
+    UA_String src;
+    src.length = 11;
+    UA_Byte   mem[11] = "ACPLT OPCUA";
+    src.data   = mem;
+
+    //encoded size is 11+4 = 15
+
+    UA_Byte data[] = {  0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+    UA_ByteString dst = { 8, data };
+
+    UA_StatusCode  retval  = 0;
+    size_t pos     = 0;
+
+    //CASE 1: enable encoder resume - encoder will resume 2 times
+    pos = 0;
+    UA_encodeEnableResume();
+    if(!setjmp(*j_return)){
+        retval = UA_String_encodeBinary(&src, &dst, &pos); //retval is invalid
+    }else{
+        //"return of the encoder"
+        ck_assert_int_eq(pos, sizeof(UA_Int32)+4);
+        ck_assert_int_eq(dst.data[0], 11);
+        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+0], 'A');
+        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+1], 'C');
+        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+2], 'P');
+        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+3], 'L');
+        ck_assert_ptr_ne(j_buffer, NULL); //not finished
+    }
+
+    //resume the encoding -- this can happen multiple times
+    while(j_buffer != NULL){
+        if(!setjmp(*j_return)){
+            pos=0;
+            UA_encodeReinitBuffer(&dst, &pos);
+            if(j_buffer)
+                longjmp(*j_buffer, 1);
+        }else{
+            //"return of the encoder"
+            ck_assert_int_eq(pos, 7);
+            ck_assert_int_eq(dst.data[0], 'T');
+            ck_assert_int_eq(dst.data[1], 0x20);
+            ck_assert_int_eq(dst.data[2], 'O');
+            ck_assert_int_eq(dst.data[3], 'P');
+            ck_assert_int_eq(dst.data[4], 'C');
+            ck_assert_int_eq(dst.data[5], 'U');
+            ck_assert_int_eq(dst.data[6], 'A');
+            ck_assert_ptr_eq(j_buffer, NULL); //finished
+        }
+    }
+    UA_encodeDisableResume();
+
+    //CASE 2: no encoder resume enabled - break after the integer since the array does not fit in
+    // when
+    pos=0;
+    retval = UA_String_encodeBinary(&src, &dst, &pos);
+    // then
+    ck_assert_int_eq(pos, sizeof(UA_Int32));
+    ck_assert_int_eq(dst.data[0], 11);
+    ck_assert_int_eq(retval, UA_STATUSCODE_BADENCODINGERROR);
+
+    //CASE 3: enable encoder resume - encoder will resume 3 times
+    pos = 0;
+    dst.length = 5;
+    UA_encodeEnableResume();
+    if(!setjmp(*j_return)){
+        retval = UA_String_encodeBinary(&src, &dst, &pos); //retval is invalid
+    }else{
+        //"return of the encoder"
+        ck_assert_int_eq(pos, sizeof(UA_Int32)+1);
+        ck_assert_int_eq(dst.data[0], 11);
+        ck_assert_int_eq(dst.data[sizeof(UA_Int32)+0], 'A');
+        ck_assert_ptr_ne(j_buffer, NULL); //not finished
+    }
+
+    int i = 0;
+    //resume the encoding -- this can happen multiple times
+    while(j_buffer != NULL){
+        if(!setjmp(*j_return)){
+            pos=0;
+            UA_encodeReinitBuffer(&dst, &pos);
+            if(j_buffer)
+                longjmp(*j_buffer, 1);
+        }else{
+            i++;
+        }
+    }
+    UA_encodeDisableResume();
+    ck_assert_ptr_eq(j_buffer, NULL);
+    ck_assert_int_eq(i, 2); //resumed two times
+    ck_assert_int_eq(pos, 5);
+    ck_assert_int_eq(dst.data[0], 'O');
+    ck_assert_int_eq(dst.data[1], 'P');
+    ck_assert_int_eq(dst.data[2], 'C');
+    ck_assert_int_eq(dst.data[3], 'U');
+    ck_assert_int_eq(dst.data[4], 'A');
+}
+END_TEST
+
 static Suite *testSuite_builtin(void) {
     Suite *s = suite_create("Built-in Data Types 62541-6 Table 1");
 
@@ -1496,6 +1597,10 @@ static Suite *testSuite_builtin(void) {
     tcase_add_test(tc_copy, UA_LocalizedText_copycstringShallWorkOnInputExample);
     tcase_add_test(tc_copy, UA_DataValue_copyShallWorkOnInputExample);
     suite_add_tcase(s, tc_copy);
+
+    TCase *tc_jmp = tcase_create("longjmptest");
+    tcase_add_test(tc_jmp, longjmptest);
+    suite_add_tcase(s, tc_jmp);
     return s;
 }
 

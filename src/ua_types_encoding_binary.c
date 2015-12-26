@@ -3,6 +3,18 @@
 #include "ua_statuscodes.h"
 #include "ua_types_generated.h"
 
+/* Infrastructure for long jumps */
+jmp_buf *j_return = NULL;
+jmp_buf jmp_return;
+
+jmp_buf *j_buffer = NULL;
+jmp_buf jmp_buffer;
+volatile UA_ByteString *jmp_dst;
+volatile size_t *jmp_offset;
+volatile UA_DataType* jmp_type;
+volatile void* jmp_src;
+volatile size_t jmp_length;
+
 /* All de- and encoding functions have the same signature up to the pointer type.
    So we can use a jump-table to switch into member types. */
 
@@ -271,10 +283,25 @@ Double_encodeBinary(UA_Double const *src, const UA_DataType *_,
 }
 #endif /* UA_MIXED_ENDIAN */
 
+//FIXME: temporary placed
+void UA_encodeEnableResume(void){
+    j_return = &jmp_return;
+}
+
+void UA_encodeDisableResume(void){
+    j_return = NULL;
+}
+
+void UA_encodeReinitBuffer(UA_ByteString *dst, size_t *UA_RESTRICT offset){
+    jmp_dst = dst;
+    jmp_offset = offset;
+}
+
+
 /******************/
 /* Array Handling */
 /******************/
-
+#include <stdio.h>
 static UA_StatusCode
 Array_encodeBinary(const void *src, size_t length, const UA_DataType *type,
                    UA_ByteString *dst, size_t *UA_RESTRICT offset) {
@@ -289,11 +316,50 @@ Array_encodeBinary(const void *src, size_t length, const UA_DataType *type,
 
 #ifndef UA_NON_LITTLEENDIAN_ARCHITECTURE
     if(type->zeroCopyable) {
-        if(dst->length < *offset + (type->memSize * length))
-            return UA_STATUSCODE_BADENCODINGERROR;
+
+        size_t partialLength = 0;
+        //the complete array does not fit in
+compare:
+        if(dst->length - *offset <  (type->memSize * length)){
+            if(!*j_return)
+                return UA_STATUSCODE_BADENCODINGERROR;
+            partialLength = (dst->length - *offset) / type->memSize;
+            //printf("partial memcpy: %zu\n", partialLength);
+            memcpy(&dst->data[*offset], src, type->memSize * partialLength);
+            *offset += type->memSize * partialLength;
+            length -= partialLength;
+            j_buffer = &jmp_buffer;
+            if(setjmp(*j_buffer)){
+                //printf("--encoder resumed\n");
+                //reinit stuff
+                length = jmp_length;
+                dst = (UA_ByteString*)(uintptr_t)jmp_dst;
+                offset = (size_t*)(uintptr_t)jmp_offset;
+                src = (void*)(uintptr_t)jmp_src;
+                type = (UA_DataType*)(uintptr_t)jmp_type;
+                goto compare;
+            }else{
+                jmp_length = length;
+                jmp_dst = dst;
+                jmp_offset = offset;
+                jmp_src = (void*)((uintptr_t)src+(type->memSize * partialLength));
+                jmp_type = (UA_DataType*)(uintptr_t)type;
+                //printf("--encoder suspended\n");
+                //jump back
+                longjmp(*j_return, 1);
+            }
+        }
+        //printf("non-partial memcpy: %zu\n", length);
         memcpy(&dst->data[*offset], src, type->memSize * length);
         *offset += type->memSize * length;
-        return retval;
+        //printf("--returning good\n");
+        if(!*j_return)
+            return UA_STATUSCODE_GOOD;
+        else{
+            //jump back
+            j_buffer = NULL;
+            longjmp(*j_return, 1);
+        }
     }
 #endif
 
