@@ -11,9 +11,6 @@ jmp_buf *j_buffer = NULL;
 jmp_buf jmp_buffer;
 volatile UA_ByteString *jmp_dst;
 volatile size_t *jmp_offset;
-volatile UA_DataType* jmp_type;
-volatile void* jmp_src;
-volatile size_t jmp_length;
 
 /* All de- and encoding functions have the same signature up to the pointer type.
    So we can use a jump-table to switch into member types. */
@@ -292,9 +289,14 @@ void UA_encodeDisableResume(void){
     j_return = NULL;
 }
 
-void UA_encodeReinitBuffer(UA_ByteString *dst, size_t *UA_RESTRICT offset){
+UA_StatusCode UA_encodeReinitBuffer(UA_ByteString *dst, size_t *UA_RESTRICT offset){
     jmp_dst = dst;
     jmp_offset = offset;
+    if(j_buffer==NULL){
+        return UA_STATUSCODE_GOOD;
+    }else{
+        return UA_STATUSCODE_GOODCALLAGAIN;
+    }
 }
 
 
@@ -328,22 +330,15 @@ compare:
             memcpy(&dst->data[*offset], src, type->memSize * partialLength);
             *offset += type->memSize * partialLength;
             length -= partialLength;
+            src = (void*)((uintptr_t)src+(type->memSize * partialLength));
             j_buffer = &jmp_buffer;
             if(setjmp(*j_buffer)){
                 //printf("--encoder resumed\n");
                 //reinit stuff
-                length = jmp_length;
                 dst = (UA_ByteString*)(uintptr_t)jmp_dst;
                 offset = (size_t*)(uintptr_t)jmp_offset;
-                src = (void*)(uintptr_t)jmp_src;
-                type = (UA_DataType*)(uintptr_t)jmp_type;
                 goto compare;
             }else{
-                jmp_length = length;
-                jmp_dst = dst;
-                jmp_offset = offset;
-                jmp_src = (void*)((uintptr_t)src+(type->memSize * partialLength));
-                jmp_type = (UA_DataType*)(uintptr_t)type;
                 //printf("--encoder suspended\n");
                 //jump back
                 longjmp(*j_return, 1);

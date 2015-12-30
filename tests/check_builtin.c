@@ -1443,7 +1443,7 @@ START_TEST(longjmptest) {
     //CASE 1: enable encoder resume - encoder will resume 2 times
     pos = 0;
     UA_encodeEnableResume();
-    if(!setjmp(*j_return)){
+    if(!setjmp(jmp_return)){
         retval = UA_String_encodeBinary(&src, &dst, &pos); //retval is invalid
     }else{
         //"return of the encoder"
@@ -1453,16 +1453,13 @@ START_TEST(longjmptest) {
         ck_assert_int_eq(dst.data[sizeof(UA_Int32)+1], 'C');
         ck_assert_int_eq(dst.data[sizeof(UA_Int32)+2], 'P');
         ck_assert_int_eq(dst.data[sizeof(UA_Int32)+3], 'L');
-        ck_assert_ptr_ne(j_buffer, NULL); //not finished
     }
 
     //resume the encoding -- this can happen multiple times
-    while(j_buffer != NULL){
-        if(!setjmp(*j_return)){
+    while(UA_encodeReinitBuffer(&dst, &pos) == UA_STATUSCODE_GOODCALLAGAIN){
+        if(!setjmp(jmp_return)){
             pos=0;
-            UA_encodeReinitBuffer(&dst, &pos);
-            if(j_buffer)
-                longjmp(*j_buffer, 1);
+            longjmp(jmp_buffer, 1);
         }else{
             //"return of the encoder"
             ck_assert_int_eq(pos, 7);
@@ -1473,7 +1470,6 @@ START_TEST(longjmptest) {
             ck_assert_int_eq(dst.data[4], 'C');
             ck_assert_int_eq(dst.data[5], 'U');
             ck_assert_int_eq(dst.data[6], 'A');
-            ck_assert_ptr_eq(j_buffer, NULL); //finished
         }
     }
     UA_encodeDisableResume();
@@ -1491,30 +1487,27 @@ START_TEST(longjmptest) {
     pos = 0;
     dst.length = 5;
     UA_encodeEnableResume();
-    if(!setjmp(*j_return)){
+    if(!setjmp(jmp_return)){
         retval = UA_String_encodeBinary(&src, &dst, &pos); //retval is invalid
     }else{
         //"return of the encoder"
         ck_assert_int_eq(pos, sizeof(UA_Int32)+1);
         ck_assert_int_eq(dst.data[0], 11);
         ck_assert_int_eq(dst.data[sizeof(UA_Int32)+0], 'A');
-        ck_assert_ptr_ne(j_buffer, NULL); //not finished
     }
 
     int i = 0;
     //resume the encoding -- this can happen multiple times
-    while(j_buffer != NULL){
-        if(!setjmp(*j_return)){
+    while(UA_encodeReinitBuffer(&dst, &pos) == UA_STATUSCODE_GOODCALLAGAIN){
+        if(!setjmp(jmp_return)){
             pos=0;
             UA_encodeReinitBuffer(&dst, &pos);
-            if(j_buffer)
-                longjmp(*j_buffer, 1);
+            longjmp(jmp_buffer, 1);
         }else{
             i++;
         }
     }
     UA_encodeDisableResume();
-    ck_assert_ptr_eq(j_buffer, NULL);
     ck_assert_int_eq(i, 2); //resumed two times
     ck_assert_int_eq(pos, 5);
     ck_assert_int_eq(dst.data[0], 'O');
