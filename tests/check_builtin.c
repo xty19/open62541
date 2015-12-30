@@ -1523,7 +1523,6 @@ START_TEST(longjmptest) {
     while(UA_encodeReinitBuffer(&dst, &pos) == UA_STATUSCODE_GOODCALLAGAIN){
         if(!setjmp(jmp_return)){
             pos=0;
-            UA_encodeReinitBuffer(&dst, &pos);
             longjmp(jmp_buffer, 1);
         }else{
             i++;

@@ -303,7 +303,6 @@ UA_StatusCode UA_encodeReinitBuffer(UA_ByteString *dst, size_t *UA_RESTRICT offs
 /******************/
 /* Array Handling */
 /******************/
-#include <stdio.h>
 static UA_StatusCode
 Array_encodeBinary(const void *src, size_t length, const UA_DataType *type,
                    UA_ByteString *dst, size_t *UA_RESTRICT offset) {
