@@ -71,7 +71,7 @@ static hash_t hash(const UA_NodeId *n) {
     case UA_NODEIDTYPE_BYTESTRING:
         return hash_array((const UA_Byte *)n->identifier.byteString.data, n->identifier.byteString.length, n->namespaceIndex);
     default:
-        UA_assert(UA_FALSE);
+        UA_assert(false);
         return 0;
     }
 }

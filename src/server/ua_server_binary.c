@@ -387,7 +387,7 @@ processMSG(UA_Connection *connection, UA_Server *server, const UA_ByteString *ms
     if(!session) {
         UA_Session_init(&anonymousSession);
         anonymousSession.channel = channel;
-        anonymousSession.activated = UA_TRUE;
+        anonymousSession.activated = true;
         session = &anonymousSession;
     }
 

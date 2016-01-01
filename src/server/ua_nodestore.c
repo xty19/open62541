@@ -51,7 +51,7 @@ static UA_Int16 higher_prime_index(hash_t n) {
     return low;
 }
 
-/* Returns UA_TRUE if an entry was found under the nodeid. Otherwise, returns
+/* Returns true if an entry was found under the nodeid. Otherwise, returns
    false and sets slot to a pointer to the next free slot. */
 static UA_Boolean
 containsNodeId(const UA_NodeStore *ns, const UA_NodeId *nodeid, UA_NodeStoreEntry **entry) {
@@ -62,12 +62,12 @@ containsNodeId(const UA_NodeStore *ns, const UA_NodeId *nodeid, UA_NodeStoreEntr
 
     if(!e->taken) {
         *entry = e;
-        return UA_FALSE;
+        return false;
     }
 
     if(UA_NodeId_equal(&e->node.node.nodeId, nodeid)) {
         *entry = e;
-        return UA_TRUE;
+        return true;
     }
 
     hash_t hash2 = mod2(h, size);
@@ -78,16 +78,16 @@ containsNodeId(const UA_NodeStore *ns, const UA_NodeId *nodeid, UA_NodeStoreEntr
         e = &ns->entries[index];
         if(!e->taken) {
             *entry = e;
-            return UA_FALSE;
+            return false;
         }
         if(UA_NodeId_equal(&e->node.node.nodeId, nodeid)) {
             *entry = e;
-            return UA_TRUE;
+            return true;
         }
     }
 
     /* NOTREACHED */
-    return UA_TRUE;
+    return true;
 }
 
 /* The following function changes size of memory allocated for the entries and
@@ -129,7 +129,7 @@ static UA_StatusCode expand(UA_NodeStore *ns) {
 static UA_INLINE void
 deleteEntry(UA_NodeStoreEntry *entry) {
     UA_Node_deleteMembersAnyNodeClass(&entry->node.node);
-    entry->taken = UA_FALSE;
+    entry->taken = false;
 }
 
 /** Copies the node into the entry. Then free the original node (but not its content). */
@@ -161,11 +161,11 @@ static void fillEntry(UA_NodeStoreEntry *entry, UA_Node *node) {
         nodesize = sizeof(UA_ViewNode);
         break;
     default:
-        UA_assert(UA_FALSE);
+        UA_assert(false);
     }
     memcpy(&entry->node, node, nodesize);
     UA_free(node);
-    entry->taken = UA_TRUE;
+    entry->taken = true;
 }
 
 /**********************/
@@ -214,7 +214,7 @@ UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, UA_Node **ins
         UA_Int32 identifier = ns->count+1; // start value
         UA_Int32 size = ns->size;
         hash_t increase = mod2(identifier, size);
-        while(UA_TRUE) {
+        while(true) {
             node->nodeId.identifier.numeric = identifier;
             if(!containsNodeId(ns, &node->nodeId, &entry))
                 break;

@@ -15,16 +15,18 @@
 # include "open62541.h"
 #endif
 
-UA_Boolean running = 1;
+UA_Boolean running = true;
 UA_Logger logger = Logger_Stdout;
 
 static void stopHandler(int sign) {
     UA_LOG_INFO(logger, UA_LOGCATEGORY_SERVER, "received ctrl-c");
-    running = 0;
+    running = false;
 }
 
-static UA_StatusCode readInteger(void *handle, const UA_NodeId nodeid, UA_Boolean sourceTimeStamp, const UA_NumericRange *range, UA_DataValue *dataValue) {
-    dataValue->hasValue = UA_TRUE;
+static UA_StatusCode
+readInteger(void *handle, const UA_NodeId nodeid, UA_Boolean sourceTimeStamp,
+            const UA_NumericRange *range, UA_DataValue *dataValue) {
+    dataValue->hasValue = true;
     UA_Variant_setScalarCopy(&dataValue->value, (UA_UInt32*)handle, &UA_TYPES[UA_TYPES_INT32]);
     //note that this is only possible if the identifier is a string - but we are sure to have one here
     UA_LOG_INFO(logger, UA_LOGCATEGORY_USERLAND, "Node read %.*s",nodeid.identifier.string.length, nodeid.identifier.string.data);
@@ -32,16 +34,17 @@ static UA_StatusCode readInteger(void *handle, const UA_NodeId nodeid, UA_Boolea
     return UA_STATUSCODE_GOOD;
 }
 
-static UA_StatusCode writeInteger(void *handle, const UA_NodeId nodeid, const UA_Variant *data, const UA_NumericRange *range){
+static UA_StatusCode
+writeInteger(void *handle, const UA_NodeId nodeid, const UA_Variant *data, const UA_NumericRange *range){
     if(UA_Variant_isScalar(data) && data->type == &UA_TYPES[UA_TYPES_INT32] && data->data){
         *(UA_UInt32*)handle = *(UA_Int32*)data->data;
     }
     //note that this is only possible if the identifier is a string - but we are sure to have one here
-    UA_LOG_INFO(logger, UA_LOGCATEGORY_USERLAND, "Node written %.*s",nodeid.identifier.string.length, nodeid.identifier.string.data);
+    UA_LOG_INFO(logger, UA_LOGCATEGORY_USERLAND, "Node written %.*s",
+                nodeid.identifier.string.length, nodeid.identifier.string.data);
     UA_LOG_INFO(logger, UA_LOGCATEGORY_USERLAND, "written value %i", *(UA_UInt32*)handle);
     return UA_STATUSCODE_GOOD;
 }
-
 
 int main(int argc, char** argv) {
     signal(SIGINT, stopHandler); /* catches ctrl-c */

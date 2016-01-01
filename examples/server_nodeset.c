@@ -18,7 +18,7 @@
 /* files nodeset.h and nodeset.c are created from server_nodeset.xml in the /src_generated directory by CMake */
 #include "nodeset.h"
 
-UA_Boolean running = UA_TRUE;
+UA_Boolean running = true;
 UA_Logger logger = Logger_Stdout;
 
 static void stopHandler(int sign) {

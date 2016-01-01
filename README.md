@@ -39,7 +39,7 @@ With the GCC compiler, just run ```gcc -std=c99 <server.c> open62541.c -o server
 #define WORKER_THREADS 2 /* if multithreading is enabled */
 #define PORT 16664
 
-UA_Boolean running = UA_TRUE;
+UA_Boolean running = true;
 void signalHandler(int sign) {
     running = UA_FALSE;
 }

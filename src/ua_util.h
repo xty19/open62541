@@ -97,11 +97,11 @@ int gettimeofday(struct timeval *tp, struct timezone *tzp);
 extern UA_THREAD_LOCAL bool rcu_locked;
 # define UA_RCU_LOCK() do {     \
         assert(!rcu_locked);    \
-        rcu_locked = UA_TRUE;   \
+        rcu_locked = true;   \
         rcu_read_lock(); } while(0)
 # define UA_RCU_UNLOCK() do { \
         assert(rcu_locked);   \
-        rcu_locked = UA_FALSE;    \
+        rcu_locked = false;    \
         rcu_read_lock(); } while(0)
 # endif
 #else

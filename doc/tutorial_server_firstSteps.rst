@@ -135,11 +135,11 @@ Open myServer.c and write/paste your minimal server application:
    # include "logger_stdout.h"
    # include "networklayer_tcp.h"
 
-   UA_Boolean running;
+   UA_Boolean running = true;
+
    int main(void) {
      UA_Server *server = UA_Server_new(UA_ServerConfig_standard);
      UA_Server_addNetworkLayer(server, ServerNetworkLayerTCP_new(UA_ConnectionConfig_standard, 16664));
-     running = UA_TRUE;
      UA_Server_run(server, 1, &running);
      UA_Server_delete(server);
 
@@ -170,11 +170,10 @@ We will also make a slight change to our server: We want it to exit cleanly when
     #include "logger_stdout.h"
     #include "networklayer_tcp.h"
 
-    UA_Boolean running;
-    UA_Logger logger;
+    UA_Boolean running = true;
 
     static void stopHandler(int signal) {
-      running = UA_FALSE;
+      running = false;
     }
 
     int main(void) {
@@ -182,10 +181,9 @@ We will also make a slight change to our server: We want it to exit cleanly when
       signal(SIGTERM, stopHandler);
       
       UA_Server *server = UA_Server_new(UA_ServerConfig_standard);
-      logger = Logger_Stdout_new();
+      UA_Logger logger = Logger_Stdout_new();
       UA_Server_setLogger(server, logger);
       UA_Server_addNetworkLayer(server, ServerNetworkLayerTCP_new(UA_ConnectionConfig_standard, 16664));
-      running = UA_TRUE;
       UA_Server_run(server, 1, &running);
       UA_Server_delete(server);
       
@@ -267,11 +265,11 @@ Open myServer.c and simplify it to:
    #include <stdio.h>
    #include "open62541.h"
 
-   UA_Boolean running;
+   UA_Boolean running = true;
+
    int main(void) {
      UA_Server *server = UA_Server_new(UA_ServerConfig_standard);
      UA_Server_addNetworkLayer(server, ServerNetworkLayerTCP_new(UA_ConnectionConfig_standard, 16664));
-     running = UA_TRUE;
      UA_Server_run(server, 1, &running);
      UA_Server_delete(server);
 

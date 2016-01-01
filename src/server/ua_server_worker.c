@@ -351,7 +351,7 @@ static UA_UInt16 processRepeatedJobs(UA_Server *server) {
 
         //start iterating the list from the beginning
         struct RepeatedJobs *prevTw = LIST_FIRST(&server->repeatedJobs); // after which tw do we insert?
-        while(UA_TRUE) {
+        while(true) {
             struct RepeatedJobs *n = LIST_NEXT(prevTw, pointers);
             if(!n || n->nextTime > tw->nextTime)
                 break;
@@ -508,10 +508,10 @@ static void dispatchDelayedJobs(UA_Server *server, void *data /* not used, but n
             dw = dw->next;
             continue;
         }
-        UA_Boolean allMoved = UA_TRUE;
+        UA_Boolean allMoved = true;
         for(UA_UInt16 i=0;i<server->nThreads;i++) {
             if(dw->workerCounters[i] == *server->workerCounters[i]) {
-                allMoved = UA_FALSE;
+                allMoved = false;
                 break;
             }
         }

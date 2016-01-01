@@ -41,7 +41,7 @@ static void deleteEntry(struct rcu_head *head) {
         UA_ViewNode_deleteMembers((UA_ViewNode*)&entry->node);
         break;
     default:
-        UA_assert(UA_FALSE);
+        UA_assert(false);
         break;
     }
     free(entry);
@@ -155,7 +155,7 @@ UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, const UA_Node
         identifier++;
 
         newNode->nodeId.identifier.numeric = identifier;
-        while(UA_TRUE) {
+        while(true) {
             hash_t h = hash(&newNode->nodeId);
             result = cds_lfht_add_unique(ns->ht, h, compare, &newNode->nodeId, &entry->htn);
             if(result == &entry->htn)

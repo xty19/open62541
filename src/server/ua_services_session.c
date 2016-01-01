@@ -109,7 +109,7 @@ Service_ActivateSession(UA_Server *server, UA_Session *session,
         if(foundSession->channel && foundSession->channel != channel)
             UA_SecureChannel_detachSession(foundSession->channel, foundSession);
         UA_SecureChannel_attachSession(channel, foundSession);
-        foundSession->activated = UA_TRUE;
+        foundSession->activated = true;
         UA_Session_updateLifetime(foundSession);
         return;
     }
@@ -137,7 +137,7 @@ Service_ActivateSession(UA_Server *server, UA_Session *session,
             if(foundSession->channel && foundSession->channel != channel)
                 UA_SecureChannel_detachSession(foundSession->channel, foundSession);
             UA_SecureChannel_attachSession(channel, foundSession);
-            foundSession->activated = UA_TRUE;
+            foundSession->activated = true;
             UA_Session_updateLifetime(foundSession);
             return;
         }

@@ -39,8 +39,6 @@ extern "C" {
 
 /** Boolean: A two-state logical value (true or false) */
 typedef bool UA_Boolean;
-#define UA_TRUE true
-#define UA_FALSE false
 
 /** SByte: An integer value between -128 and 127 */
 typedef int8_t UA_SByte;

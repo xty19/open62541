@@ -32,8 +32,6 @@ A two-state logical value (true or false).
 .. code-block:: c
 
   typedef bool UA_Boolean;
-  #define UA_TRUE true
-  #define UA_FALSE false
 
 UA_SByte
 ^^^^^^^^

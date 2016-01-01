@@ -34,7 +34,7 @@ Boolean_decodeBinary(UA_ByteString const *src, size_t *UA_RESTRICT offset,
                      UA_Boolean *dst, const UA_DataType *_) {
     if(*offset + sizeof(UA_Boolean) > src->length)
         return UA_STATUSCODE_BADDECODINGERROR;
-    *dst = (src->data[*offset] > 0) ? UA_TRUE : UA_FALSE;
+    *dst = (src->data[*offset] > 0) ? true : false;
     ++(*offset);
     return UA_STATUSCODE_GOOD;
 }
@@ -984,7 +984,7 @@ DiagnosticInfo_decodeBinary(UA_ByteString const *src, size_t *UA_RESTRICT offset
         if(dst->innerDiagnosticInfo)
             retval |= DiagnosticInfo_decodeBinary(src, offset, dst->innerDiagnosticInfo, NULL);
         else {
-            dst->hasInnerDiagnosticInfo = UA_FALSE;
+            dst->hasInnerDiagnosticInfo = false;
             retval |= UA_STATUSCODE_BADOUTOFMEMORY;
         }
     }
