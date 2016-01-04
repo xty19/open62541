@@ -1,14 +1,8 @@
-typedef UA_UInt32 hash_t;
-
-static hash_t mod(hash_t h, hash_t size) { return h % size; }
-static hash_t mod2(hash_t h, hash_t size) { return 1 + (h % (size - 2)); }
+#include "ua_server_internal.h"
 
 /* Based on Murmur-Hash 3 by Austin Appleby (public domain, freely usable) */
-static hash_t hash_array(const UA_Byte *data, UA_UInt32 len, UA_UInt32 seed) {
-    if(data == NULL)
-        return 0;
-
-    const int32_t   nblocks = len / 4;
+hash_t hash_array(const UA_Byte *data, size_t len, hash_t seed) {
+    const size_t nblocks = len / 4;
     const uint32_t *blocks;
     static const uint32_t c1 = 0xcc9e2d51;
     static const uint32_t c2 = 0x1b873593;
@@ -26,7 +20,7 @@ static hash_t hash_array(const UA_Byte *data, UA_UInt32 len, UA_UInt32 seed) {
 #if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 6) || __GNUC__ > 4 || defined(__clang__))
 #pragma GCC diagnostic pop
 #endif
-    for(int32_t i = 0;i < nblocks;i++) {
+    for(size_t i = 0;i < nblocks;i++) {
         uint32_t k = blocks[i];
         k    *= c1;
         k     = (k << r1) | (k >> (32 - r1));
@@ -59,20 +53,50 @@ static hash_t hash_array(const UA_Byte *data, UA_UInt32 len, UA_UInt32 seed) {
     return hash;
 }
 
-static hash_t hash(const UA_NodeId *n) {
+hash_t hash_nodeid(const UA_NodeId *n) {
     switch(n->identifierType) {
     case UA_NODEIDTYPE_NUMERIC:
         /*  Knuth's multiplicative hashing */
-        return (n->identifier.numeric + n->namespaceIndex) * 2654435761;   // mod(2^32) is implicit
+        return (n->identifier.numeric + n->namespaceIndex) * 2654435761; // mod(2^32) is implicit
     case UA_NODEIDTYPE_STRING:
         return hash_array(n->identifier.string.data, n->identifier.string.length, n->namespaceIndex);
     case UA_NODEIDTYPE_GUID:
         return hash_array((const UA_Byte *)&(n->identifier.guid), sizeof(UA_Guid), n->namespaceIndex);
     case UA_NODEIDTYPE_BYTESTRING:
-        return hash_array((const UA_Byte *)n->identifier.byteString.data, n->identifier.byteString.length, n->namespaceIndex);
+        return hash_array((const UA_Byte *)n->identifier.byteString.data,
+                          n->identifier.byteString.length, n->namespaceIndex);
     default:
         UA_assert(UA_FALSE);
         return 0;
     }
 }
 
+hash_t hash_type(const void *p, const UA_DataType *type, hash_t seed) {
+    uintptr_t ptr = (uintptr_t)p;
+    hash_t hash = hash_array((const UA_Byte*)p, type->memSize, seed);
+    UA_Byte membersSize = type->membersSize;
+    for(size_t i = 0; i < membersSize; i++) {
+        const UA_DataTypeMember *member = &type->members[i];
+        const UA_DataType *typelists[2] = { UA_TYPES, &type[-type->typeIndex] };
+        const UA_DataType *memberType = &typelists[!member->namespaceZero][member->memberTypeIndex];
+        if(!member->isArray) {
+            ptr += member->padding;
+            ptr += memberType->memSize;
+        } else {
+            ptr += member->padding;
+            size_t length = *(size_t*)ptr;
+            ptr += sizeof(size_t);
+            if(length > 0) {
+                if(memberType->fixedSize)
+                    hash = hash_array(*(const UA_Byte**)ptr, memberType->memSize * length, hash);
+                else {
+                    uintptr_t arr_ptr = (uintptr_t)*(void**)ptr;
+                    hash = hash_type((void*)arr_ptr, memberType, hash);
+                    arr_ptr += memberType->memSize;
+                }
+            }
+            ptr += sizeof(void*);
+        }
+    }
+    return hash;
+}

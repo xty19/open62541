@@ -97,4 +97,13 @@ UA_StatusCode UA_Server_addDelayedJob(UA_Server *server, UA_Job job);
 
 void UA_Server_deleteAllRepeatedJobs(UA_Server *server);
 
+/***********/
+/* Hashing */
+/***********/
+
+typedef UA_UInt32 hash_t;
+hash_t hash_array(const UA_Byte *data, size_t len, hash_t seed);
+hash_t hash_type(const void *p, const UA_DataType *type, hash_t seed);
+hash_t hash_nodeid(const UA_NodeId *n);
+
 #endif /* UA_SERVER_INTERNAL_H_ */

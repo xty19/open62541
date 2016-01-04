@@ -1,5 +1,5 @@
 #include "ua_nodestore.h"
-#include "ua_util.h"
+#include "ua_server_internal.h"
 #include "ua_statuscodes.h"
 
 #define UA_NODESTORE_MINSIZE 64
@@ -26,8 +26,6 @@ struct UA_NodeStore {
     UA_UInt32 sizePrimeIndex;
 };
 
-#include "ua_nodestore_hash.inc"
-
 /* The size of the hash-map is always a prime number. They are chosen to be
    close to the next power of 2. So the size ca. doubles with each prime. */
 static hash_t const primes[] = {
@@ -51,13 +49,16 @@ static UA_Int16 higher_prime_index(hash_t n) {
     return low;
 }
 
+static hash_t mod(hash_t h, hash_t size) { return h % size; }
+static hash_t mod2(hash_t h, hash_t size) { return 1 + (h % (size - 2)); }
+
 /* Returns UA_TRUE if an entry was found under the nodeid. Otherwise, returns
    false and sets slot to a pointer to the next free slot. */
 static UA_Boolean
 containsNodeId(const UA_NodeStore *ns, const UA_NodeId *nodeid, UA_NodeStoreEntry **entry) {
-    hash_t         h     = hash(nodeid);
+    hash_t         h     = hash_nodeid(nodeid);
     UA_UInt32      size  = ns->size;
-    hash_t         index = mod(h, size);
+    hash_t         index = h % size;
     UA_NodeStoreEntry *e = &ns->entries[index];
 
     if(!e->taken) {
@@ -71,7 +72,7 @@ containsNodeId(const UA_NodeStore *ns, const UA_NodeId *nodeid, UA_NodeStoreEntr
     }
 
     hash_t hash2 = mod2(h, size);
-    for(;;) {
+    while(UA_TRUE) {
         index += hash2;
         if(index >= size)
             index -= size;

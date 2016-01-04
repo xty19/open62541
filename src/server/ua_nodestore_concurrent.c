@@ -1,4 +1,5 @@
 #include "ua_util.h"
+#include "ua_server_internal.h"
 #include "ua_nodestore.h"
 
 struct nodeEntry {
@@ -133,7 +134,7 @@ UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, const UA_Node
     tempNodeid = node->nodeId;
     tempNodeid.namespaceIndex = 0;
     if(!UA_NodeId_isNull(&tempNodeid)) {
-        hash_t h = hash(&node->nodeId);
+        hash_t h = hash_nodeid(&node->nodeId);
         result = cds_lfht_add_unique(ns->ht, h, compare, &newNode->nodeId, &entry->htn);
         /* If the nodeid exists already */
         if(result != &entry->htn) {
@@ -156,7 +157,7 @@ UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, const UA_Node
 
         newNode->nodeId.identifier.numeric = identifier;
         while(UA_TRUE) {
-            hash_t h = hash(&newNode->nodeId);
+            hash_t h = hash_nodeid(&newNode->nodeId);
             result = cds_lfht_add_unique(ns->ht, h, compare, &newNode->nodeId, &entry->htn);
             if(result == &entry->htn)
                 break;
@@ -173,7 +174,7 @@ UA_StatusCode UA_NodeStore_insert(UA_NodeStore *ns, UA_Node *node, const UA_Node
 UA_StatusCode UA_NodeStore_replace(UA_NodeStore *ns, const UA_Node *oldNode, UA_Node *node,
                                    const UA_Node **inserted) {
     /* Get the current version */
-    hash_t h = hash(&node->nodeId);
+    hash_t h = hash_nodeid(&node->nodeId);
     struct cds_lfht_iter iter;
     cds_lfht_lookup(ns->ht, h, compare, &node->nodeId, &iter);
     if(!iter.node)
@@ -237,7 +238,7 @@ UA_StatusCode UA_NodeStore_replace(UA_NodeStore *ns, const UA_Node *oldNode, UA_
 }
 
 UA_StatusCode UA_NodeStore_remove(UA_NodeStore *ns, const UA_NodeId *nodeid) {
-    hash_t h = hash(nodeid);
+    hash_t h = hash_nodeid(nodeid);
     struct cds_lfht_iter iter;
     cds_lfht_lookup(ns->ht, h, compare, &nodeid, &iter);
     if(!iter.node || cds_lfht_del(ns->ht, iter.node) != 0)
@@ -248,7 +249,7 @@ UA_StatusCode UA_NodeStore_remove(UA_NodeStore *ns, const UA_NodeId *nodeid) {
 }
 
 const UA_Node * UA_NodeStore_get(const UA_NodeStore *ns, const UA_NodeId *nodeid) {
-    hash_t h = hash(nodeid);
+    hash_t h = hash_nodeid(nodeid);
     struct cds_lfht_iter iter;
     cds_lfht_lookup(ns->ht, h, compare, nodeid, &iter);
     struct nodeEntry *found_entry = (struct nodeEntry*)iter.node;
