@@ -196,16 +196,16 @@ Float_decodeBinary(bufpos pos, bufend end, UA_Float *dst) {
     if(memcmp(*pos, UA_FLOAT_ZERO, 4) == 0)
         return Int32_decodeBinary(pos, end, (UA_Int32*) dst);
     mantissa = (UA_Float)(**pos & 0xFF); // bits 0-7
-    mantissa = (mantissa / 256.0) + (UA_Float)((*pos)[1] & 0xFF); // bits 8-15
-    mantissa = (mantissa / 256.0) + (UA_Float)((*pos)[2] & 0x7F); // bits 16-22
+    mantissa = (mantissa / 256.0f) + (UA_Float)((*pos)[1] & 0xFF); // bits 8-15
+    mantissa = (mantissa / 256.0f) + (UA_Float)((*pos)[2] & 0x7F); // bits 16-22
     biasedExponent = ((*pos)[2] & 0x80) >> 7; // bits 23
-    biasedExponent |= ((*pos)[3] & 0x7F) << 1; // bits 24-30
+    biasedExponent |= (UA_UInt32)(((*pos)[3] & 0x7F) << 1); // bits 24-30
     sign = ((*pos)[3] & 0x80) ? -1.0 : 1.0; // bit 31
     if(biasedExponent >= 127)
-        *dst = (UA_Float)sign*(1<<(biasedExponent-127))*(1.0+mantissa/128.0);
+        *dst = sign*((UA_Float)(1<<(biasedExponent-127)))*(1.0f+mantissa/128.0f);
     else
-        *dst = (UA_Float)sign*2.0*(1.0+mantissa/128.0)/((UA_Float)(biasedExponent-127));
-    *offset += 4;
+        *dst = (UA_Float)sign*2.0f*(1.0f+mantissa/128.0f)/((UA_Float)(biasedExponent-127));
+    *pos += 4;
     return UA_STATUSCODE_GOOD;
 }
 
@@ -214,10 +214,10 @@ Float_encodeBinary(UA_Float const *src, bufpos pos, bufend end) {
     if(*pos + sizeof(UA_Float) > end)
         return UA_STATUSCODE_BADENCODINGERROR;
     UA_Float srcFloat = *src;
-    **pos = (UA_Byte) (((UA_Int32) srcFloat & 0xFF000000) >> 24); (*pos)++;
-    **pos = (UA_Byte) (((UA_Int32) srcFloat & 0x00FF0000) >> 16); (*pos)++;
-    **pos = (UA_Byte) (((UA_Int32) srcFloat & 0x0000FF00) >> 8); (*pos)++;
-    **pos = (UA_Byte) ((UA_Int32)  srcFloat & 0x000000FF); (*pos)++;
+    **pos = (UA_Byte) (((UA_UInt32) srcFloat & 0xFF000000) >> 24); (*pos)++;
+    **pos = (UA_Byte) (((UA_UInt32) srcFloat & 0x00FF0000) >> 16); (*pos)++;
+    **pos = (UA_Byte) (((UA_UInt32) srcFloat & 0x0000FF00) >> 8); (*pos)++;
+    **pos = (UA_Byte) ((UA_UInt32)  srcFloat & 0x000000FF); (*pos)++;
     return UA_STATUSCODE_GOOD;
 }
 
@@ -225,8 +225,8 @@ Float_encodeBinary(UA_Float const *src, bufpos pos, bufend end) {
 // Todo: Architecture agnostic de- and encoding, like float has it
 UA_Byte UA_DOUBLE_ZERO[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static UA_StatusCode
-Double_decodeBinary(UA_ByteString const *src, bufpos pos, buflen len) {
-    if(*offset + sizeof(UA_Double) > src->length)
+Double_decodeBinary(bufpos pos, bufend end, UA_UInt64 *dst) {
+    if(*pos + sizeof(UA_Double) > end)
         return UA_STATUSCODE_BADDECODINGERROR;
     UA_Byte *dstBytes = (UA_Byte*)dst;
     UA_Double db = 0;
