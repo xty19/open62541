@@ -665,7 +665,7 @@ void UA_EXPORT UA_delete(void *p, const UA_DataType *type);
 
 /**
  * Array handling
- * ^^^^^^^^^^^^^^
+ * --------------
  * The functions for array handling are all defined to operate on the generic
  * type descriptions. */
 
