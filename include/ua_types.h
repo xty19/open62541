@@ -36,7 +36,7 @@ extern "C" {
  * of the 25 builtin data types.
  *
  * In open62541, all data types share the same basic API for creation, copying
- * and deletion. The following functions are present for all data types ``T``.
+ * and deletion. The following functions are defined for all data types ``T``.
  *
  * ``void T_init(T *ptr)``
  *   Initialize the data type. This is synonymous with zeroing out the memory, i.e. *memset(dataptr, 0, sizeof(T))*.
@@ -59,7 +59,7 @@ extern "C" {
  *
  * Boolean
  * ^^^^^^^
- * A two-state logical value (true or false) */
+ * A two-state logical value (true or false). */
 typedef bool UA_Boolean;
 #define UA_TRUE true
 #define UA_FALSE false
@@ -67,7 +67,7 @@ typedef bool UA_Boolean;
 /**
  * SByte
  * ^^^^^
- * An integer value between -128 and 127 */
+ * An integer value between -128 and 127. */
 typedef int8_t UA_SByte;
 #define UA_SBYTE_MAX 127
 #define UA_SBYTE_MIN (-128)
@@ -75,7 +75,7 @@ typedef int8_t UA_SByte;
 /**
  * Byte
  * ^^^^
- * An integer value between 0 and 256 */
+ * An integer value between 0 and 256. */
 typedef uint8_t UA_Byte;
 #define UA_BYTE_MAX 256
 #define UA_BYTE_MIN 0
@@ -83,7 +83,7 @@ typedef uint8_t UA_Byte;
 /**
  * Int16
  * ^^^^^
- * An integer value between -32 768 and 32 767 */
+ * An integer value between -32 768 and 32 767. */
 typedef int16_t UA_Int16;
 #define UA_INT16_MAX 32767
 #define UA_INT16_MIN (-32768)
@@ -91,7 +91,7 @@ typedef int16_t UA_Int16;
 /**
  * UInt16
  * ^^^^^^
- * An integer value between 0 and 65 535 */
+ * An integer value between 0 and 65 535. */
 typedef uint16_t UA_UInt16;
 #define UA_UINT16_MAX 65535
 #define UA_UINT16_MIN 0
@@ -99,7 +99,7 @@ typedef uint16_t UA_UInt16;
 /**
  * Int32
  * ^^^^^
- * An integer value between -2 147 483 648 and 2 147 483 647 */
+ * An integer value between -2 147 483 648 and 2 147 483 647. */
 typedef int32_t UA_Int32;
 #define UA_INT32_MAX 2147483647
 #define UA_INT32_MIN (-2147483648)
@@ -107,7 +107,7 @@ typedef int32_t UA_Int32;
 /**
  * UInt32
  * ^^^^^^
- * An integer value between 0 and 4 294 967 295 */
+ * An integer value between 0 and 4 294 967 295. */
 typedef uint32_t UA_UInt32;
 #define UA_UINT32_MAX 4294967295
 #define UA_UINT32_MIN 0
@@ -115,7 +115,7 @@ typedef uint32_t UA_UInt32;
 /**
  * Int64
  * ^^^^^
- * An integer value between -10 223 372 036 854 775 808 and 9 223 372 036 854 775 807 */
+ * An integer value between -10 223 372 036 854 775 808 and 9 223 372 036 854 775 807. */
 typedef int64_t UA_Int64;
 #define UA_INT64_MAX (int64_t)9223372036854775807
 #define UA_INT64_MIN ((int64_t)-9223372036854775808)
@@ -123,7 +123,7 @@ typedef int64_t UA_Int64;
 /**
  * UInt64
  * ^^^^^^
- * An integer value between 0 and 18 446 744 073 709 551 615 */
+ * An integer value between 0 and 18 446 744 073 709 551 615. */
 typedef uint64_t UA_UInt64;
 #define UA_UINT64_MAX (int64_t)18446744073709551615
 #define UA_UINT64_MIN (int64_t)0
@@ -131,50 +131,54 @@ typedef uint64_t UA_UInt64;
 /**
  * Float
  * ^^^^^
- * An IEEE single precision (32 bit) floating point value */
+ * An IEEE single precision (32 bit) floating point value. */
 typedef float UA_Float;
 
 /**
  * Double
  * ^^^^^^
- * An IEEE double precision (64 bit) floating point value */
+ * An IEEE double precision (64 bit) floating point value. */
 typedef double UA_Double;
 
 /**
  * StatusCode
  * ^^^^^^^^^^
- * A numeric identifier for a error or condition that is associated with a value or an operation */
+ * A numeric identifier for a error or condition that is associated with a value or an operation. */
 typedef uint32_t UA_StatusCode;
 
 /**
  * String
  * ^^^^^^
- * A sequence of Unicode characters */
+ * A sequence of Unicode characters. */
 typedef struct {
     size_t length; // The length of the string
     UA_Byte *data; // The string's content (not null-terminated)
 } UA_String;
 
+/* Copies the content on the heap. Returns a null-string when alloc fails */
+UA_String UA_EXPORT UA_String_fromChars(char const src[]) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
+
+UA_Boolean UA_EXPORT UA_String_equal(const UA_String *s1, const UA_String *s2);
+
 UA_EXPORT extern const UA_String UA_STRING_NULL;
 
+/**
+ * `UA_STRING` returns a string pointing to the preallocated char-array.
+ * `UA_STRING_ALLOC` is shorthand for 'UA_String_fromChars' and makes a copy of
+ * the char-array. */
 static UA_INLINE UA_String UA_STRING(char *chars) {
     UA_String str; str.length = strlen(chars);
     str.data = (UA_Byte*)chars; return str; }
 
 #define UA_STRING_ALLOC(CHARS) UA_String_fromChars(CHARS)
-    
-/** Copies the content on the heap. Returns a null-string when alloc fails */
-UA_String UA_EXPORT UA_String_fromChars(char const src[]) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
-
-UA_Boolean UA_EXPORT UA_String_equal(const UA_String *s1, const UA_String *s2);
 
 /**
  * DateTime
  * ^^^^^^^^
  * An instance in time. A DateTime value is encoded as a 64-bit signed integer
-   which represents the number of 100 nanosecond intervals since January 1, 1601
-   (UTC) */
-typedef UA_Int64 UA_DateTime;
+ * which represents the number of 100 nanosecond intervals since January 1, 1601
+ * (UTC). */
+typedef int64_t UA_DateTime;
 
 /* Multiply to convert units for time difference computations */
 #define UA_USEC_TO_DATETIME 10LL
@@ -209,7 +213,7 @@ UA_String UA_EXPORT UA_DateTime_toString(UA_DateTime t);
 /**
  * Guid
  * ^^^^
- * A 16 byte value that can be used as a globally unique identifier */
+ * A 16 byte value that can be used as a globally unique identifier. */
 typedef struct {
     UA_UInt32 data1;
     UA_UInt16 data2;
@@ -225,7 +229,7 @@ UA_Guid UA_EXPORT UA_Guid_random(void);
 /**
  * ByteString
  * ^^^^^^^^^^
- * A sequence of octets */
+ * A sequence of octets. */
 typedef UA_String UA_ByteString;
 
 static UA_INLINE UA_Boolean
@@ -248,13 +252,13 @@ static UA_INLINE UA_ByteString UA_BYTESTRING_ALLOC(const char *chars) {
 /**
  * XmlElement
  * ^^^^^^^^^^
- * An XML element */
+ * An XML element. */
 typedef UA_String UA_XmlElement;
 
 /**
  * NodeId
  * ^^^^^^
- * An identifier for a node in the address space of an OPC UA Server */
+ * An identifier for a node in the address space of an OPC UA Server. */
 enum UA_NodeIdType {
     UA_NODEIDTYPE_NUMERIC    = 0, ///< On the wire, this can be 0,1,2 for numeric nodeids of different sizes
     UA_NODEIDTYPE_STRING     = 3,
@@ -309,7 +313,7 @@ static UA_INLINE UA_NodeId UA_NODEID_BYTESTRING_ALLOC(UA_UInt16 nsIndex, const c
 /**
  * ExpandedNodeId
  * ^^^^^^^^^^^^^^
- * A NodeId that allows the namespace URI to be specified instead of an index */
+ * A NodeId that allows the namespace URI to be specified instead of an index. */
 typedef struct {
     UA_NodeId nodeId;
     UA_String namespaceUri;
@@ -343,7 +347,7 @@ static UA_INLINE UA_ExpandedNodeId UA_EXPANDEDNODEID_BYTESTRING_ALLOC(UA_UInt16 
 /**
  * QualifiedName
  * ^^^^^^^^^^^^^
- * A name qualified by a namespace */
+ * A name qualified by a namespace. */
 typedef struct {
     UA_UInt16 namespaceIndex;
     UA_String name;
@@ -358,7 +362,7 @@ static UA_INLINE UA_QualifiedName UA_QUALIFIEDNAME_ALLOC(UA_UInt16 nsIndex, cons
 /**
  * LocalizedText
  * ^^^^^^^^^^^^^
- * Human readable text with an optional locale identifier */
+ * Human readable text with an optional locale identifier. */
 typedef struct {
     UA_String locale;
     UA_String text;
@@ -380,7 +384,7 @@ typedef struct UA_DataType UA_DataType;
  * ExtensionObject
  * ^^^^^^^^^^^^^^^
  * A structure that contains an application specific data type that may not be
- * recognized by the receiver */
+ * recognized by the receiver. */
 typedef struct {
     enum {
         UA_EXTENSIONOBJECT_ENCODED_NOBODY     = 0,
@@ -407,10 +411,10 @@ typedef struct {
  * Stores (arrays of) any data type. The differentiation between variants
  * containing a scalar, an array or no data is as follows:
  *
-    - arrayLength == 0 && data == NULL: no existing data
-    - arrayLength == 0 && data == 0x01: array of length 0
-    - arrayLength == 0 && data > 0x01: scalar value
-    - arrayLength > 0: array of the given length */
+ * - arrayLength == 0 && data == NULL: no existing data
+ * - arrayLength == 0 && data == 0x01: array of length 0
+ * - arrayLength == 0 && data > 0x01: scalar value
+ * - arrayLength > 0: array of the given length */
 typedef struct {
     const UA_DataType *type; // The data type description
     enum {
@@ -424,8 +428,7 @@ typedef struct {
     UA_UInt32 *arrayDimensions; // The length of each dimension of the data-array
 } UA_Variant;
 
-/*
- * Returns true if the variant contains a scalar value. Note that empty variants
+/* Returns true if the variant contains a scalar value. Note that empty variants
  * contain an array of length -1 (undefined).
  *
  * @param v The variant
@@ -434,8 +437,7 @@ typedef struct {
 static UA_INLINE UA_Boolean UA_Variant_isScalar(const UA_Variant *v) {
     return (v->arrayLength == 0 && v->data > UA_EMPTY_ARRAY_SENTINEL); }
     
-/*
- * Set the variant to a scalar value that already resides in memory. The value
+/* Set the variant to a scalar value that already resides in memory. The value
  * takes on the lifecycle of the variant and is deleted with it.
  *
  * @param v The variant
@@ -445,8 +447,7 @@ static UA_INLINE UA_Boolean UA_Variant_isScalar(const UA_Variant *v) {
 void UA_EXPORT
 UA_Variant_setScalar(UA_Variant *v, void * UA_RESTRICT p, const UA_DataType *type);
 
-/*
- * Set the variant to a scalar value that is copied from an existing variable.
+/* Set the variant to a scalar value that is copied from an existing variable.
  *
  * @param v The variant
  * @param p A pointer to the value data
@@ -456,8 +457,7 @@ UA_Variant_setScalar(UA_Variant *v, void * UA_RESTRICT p, const UA_DataType *typ
 UA_StatusCode UA_EXPORT
 UA_Variant_setScalarCopy(UA_Variant *v, const void *p, const UA_DataType *type);
 
-/*
- * Set the variant to an array that already resides in memory. The array takes
+/* Set the variant to an array that already resides in memory. The array takes
  * on the lifecycle of the variant and is deleted with it.
  *
  * @param v The variant
@@ -469,8 +469,7 @@ void UA_EXPORT
 UA_Variant_setArray(UA_Variant *v, void * UA_RESTRICT array,
                     size_t arraySize, const UA_DataType *type);
 
-/*
- * Set the variant to an array that is copied from an existing array.
+/* Set the variant to an array that is copied from an existing array.
  *
  * @param v The variant
  * @param array A pointer to the array data
@@ -482,7 +481,8 @@ UA_StatusCode UA_EXPORT
 UA_Variant_setArrayCopy(UA_Variant *v, const void *array,
                         size_t arraySize, const UA_DataType *type);
 
-/* NumericRanges are used to indicate subsets of a (multidimensional) variant
+/**
+ * NumericRanges are used to indicate subsets of a (multidimensional) variant
  * array. NumericRange has no official type structure in the standard. On the
  * wire, it only exists as an encoded string, such as "1:2,0:3,5". The colon
  * separates min/max index and the comma separates dimensions. A single value
@@ -495,8 +495,7 @@ typedef struct {
     } *dimensions;
 } UA_NumericRange;
 
-/*
- * Copy the variant, but use only a subset of the (multidimensional) array into a variant. Returns
+/* Copy the variant, but use only a subset of the (multidimensional) array into a variant. Returns
  * an error code if the variant is not an array or if the indicated range does not fit.
  *
  * @param src The source variant
@@ -507,8 +506,7 @@ typedef struct {
 UA_StatusCode UA_EXPORT
 UA_Variant_copyRange(const UA_Variant *src, UA_Variant *dst, const UA_NumericRange range);
 
-/*
- * Insert a range of data into an existing variant. The data array can't be reused afterwards if it
+/* Insert a range of data into an existing variant. The data array can't be reused afterwards if it
  * contains types without a fixed size (e.g. strings) since the members are moved into the variant
  * and take on its lifecycle.
  *
@@ -522,8 +520,7 @@ UA_StatusCode UA_EXPORT
 UA_Variant_setRange(UA_Variant *v, void * UA_RESTRICT array,
                     size_t arraySize, const UA_NumericRange range);
 
-/*
- * Deep-copy a range of data into an existing variant.
+/* Deep-copy a range of data into an existing variant.
  *
  * @param v The variant
  * @param dataArray The data array. The type must match the variant
@@ -582,9 +579,7 @@ typedef struct UA_DiagnosticInfo {
  * The builtin types can be combined to data structures. All information about a
  * (structured) data type is stored in a ``UA_DataType``. The array ``UA_TYPES``
  * contains the description of all standard-defined types and is used for
- * handling of generic types.
- */
-
+ * handling of generic types. */
 typedef struct {
 #ifdef UA_ENABLE_TYPENAMES
     const char *memberName;
@@ -615,16 +610,14 @@ struct UA_DataType {
     UA_DataTypeMember *members;
 };
 
-/*
- * Allocates and initializes a variable of type dataType
+/* Allocates and initializes a variable of type dataType
  *
  * @param type The datatype description
  * @return Returns the memory location of the variable or (void*)0 if no memory is available
  */
 void UA_EXPORT * UA_new(const UA_DataType *type) UA_FUNC_ATTR_MALLOC;
 
-/*
- * Initializes a variable to default values
+/* Initializes a variable to default values
  *
  * @param p The memory location of the variable
  * @param type The datatype description
@@ -632,8 +625,7 @@ void UA_EXPORT * UA_new(const UA_DataType *type) UA_FUNC_ATTR_MALLOC;
 static UA_INLINE void UA_init(void *p, const UA_DataType *type) {
     memset(p, 0, type->memSize); }
 
-/*
- * Copies the content of two variables. If copying fails (e.g. because no memory was available for
+/* Copies the content of two variables. If copying fails (e.g. because no memory was available for
  * an array), then dst is emptied and initialized to prevent memory leaks.
  *
  * @param src The memory location of the source variable
@@ -644,8 +636,7 @@ static UA_INLINE void UA_init(void *p, const UA_DataType *type) {
 UA_StatusCode UA_EXPORT
 UA_copy(const void *src, void *dst, const UA_DataType *type);
 
-/*
- * Deletes the dynamically assigned content of a variable (e.g. a member-array).
+/* Deletes the dynamically assigned content of a variable (e.g. a member-array).
  * Afterwards, the variable can be safely deleted without causing memory leaks.
  * But the variable is not initialized and may contain old data that is not
  * memory-relevant.
@@ -655,8 +646,7 @@ UA_copy(const void *src, void *dst, const UA_DataType *type);
  */
 void UA_EXPORT UA_deleteMembers(void *p, const UA_DataType *type);
 
-/*
- * Deletes (frees) a variable and all of its content.
+/* Deletes (frees) a variable and all of its content.
  *
  * @param p The memory location of the variable
  * @param type The datatype description of the variable
@@ -671,8 +661,7 @@ void UA_EXPORT UA_delete(void *p, const UA_DataType *type);
 
 #define MAX_ARRAY_SIZE 104857600 // arrays must be smaller than 100MB
 
-/*
- * Allocates and initializes an array of variables of a specific type
+/* Allocates and initializes an array of variables of a specific type
  *
  * @param size The requested array length
  * @param type The datatype description
@@ -680,8 +669,7 @@ void UA_EXPORT UA_delete(void *p, const UA_DataType *type);
  */
 void UA_EXPORT * UA_Array_new(size_t size, const UA_DataType *type) UA_FUNC_ATTR_MALLOC;
 
-/*
- * Allocates and copies an array. dst is set to (void*)0 if not enough memory is available.
+/* Allocates and copies an array. dst is set to (void*)0 if not enough memory is available.
  *
  * @param src The memory location of the source array
  * @param src_size The size of the array
@@ -693,8 +681,7 @@ UA_StatusCode UA_EXPORT
 UA_Array_copy(const void *src, size_t src_size, void **dst,
               const UA_DataType *type) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
 
-/*
- * Deletes an array.
+/* Deletes an array.
  *
  * @param p The memory location of the array
  * @param size The size of the array
