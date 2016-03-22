@@ -3,7 +3,8 @@ import os
 import binascii
 import re
 
-remove_keyword = ["UA_EXPORT ", " UA_FUNC_ATTR_WARN_UNUSED_RESULT"]
+remove_keyword = [" UA_EXPORT", " UA_FUNC_ATTR_WARN_UNUSED_RESULT",
+                  " UA_FUNC_ATTR_MALLOC"]
 
 def clean_comment(line):
     m = re.search("^( \* |/\*\* )(.*?)( \*/)?$", line)
@@ -77,3 +78,4 @@ with open(sys.argv[2], 'w') as rst:
         if doc_end:
             rst.write("\n.. code-block:: c\n\n")
             in_doc = False
+    rst.write("\n")
