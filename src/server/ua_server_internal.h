@@ -32,12 +32,19 @@ typedef struct {
                  sizeof(UA_UInt32) - sizeof(UA_Boolean)]; // separate cache lines
 } UA_Worker;
 #endif
-
+typedef struct UA_EndpointNamespaceMapping{
+	UA_EndpointDescription endpointDescriptions;
+	size_t allowedNamespacesSize;
+	UA_UInt16 allowedNamespacesIndices;
+	UA_Session *session;
+}UA_EndpointNamespaceMapping;
 struct UA_Server {
     /* Meta */
     UA_DateTime startTime;
     size_t endpointDescriptionsSize;
     UA_EndpointDescription *endpointDescriptions;
+    UA_EndpointMapping *mappings;
+    size_t mappingsSize;
 
     /* Security */
     UA_SecureChannelManager secureChannelManager;

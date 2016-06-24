@@ -90,6 +90,10 @@
     <opc:Field Name="Reason" TypeName="opc:String" />
   </opc:StructuredType>
  
+   <opc:StructuredType Name="EndpointMapping">
+    <opc:Documentation>Secure Conversation Message Abort Body</opc:Documentation>
+    <opc:Field Name="AccessibleNamespaces" TypeName="tns:UInt16" LengthField="AccessibleNamespacesSize" />
+  </opc:StructuredType>
 <!-- Transport types end -->
 
 </opc:TypeDictionary>

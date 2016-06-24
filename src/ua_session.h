@@ -27,6 +27,7 @@ typedef struct UA_PublishResponseEntry {
 
 struct UA_Session {
     UA_ApplicationDescription clientDescription;
+    size_t endpointIndex;
     UA_Boolean        activated;
     UA_String         sessionName;
     UA_NodeId         authenticationToken;

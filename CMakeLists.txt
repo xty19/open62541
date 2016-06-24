@@ -439,6 +439,8 @@ if(UA_BUILD_EXAMPLES)
       list(APPEND LIBS urcu-cds urcu urcu-common)
     endif(UA_ENABLE_MULTITHREADING)
 
+    add_executable(server_endpoint ${PROJECT_SOURCE_DIR}/examples/server_endpoint.c $<TARGET_OBJECTS:open62541-object>)
+    target_link_libraries(server_endpoint ${LIBS})
     add_executable(server_variable ${PROJECT_SOURCE_DIR}/examples/server_variable.c $<TARGET_OBJECTS:open62541-object>)
     target_link_libraries(server_variable ${LIBS})
 

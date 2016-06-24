@@ -61,10 +61,12 @@ void Service_GetEndpoints(UA_Server *server, UA_Session *session, const UA_GetEn
 #ifdef NO_ALLOCA
     UA_Boolean relevant_endpoints[server->endpointDescriptionsSize];
 #else
-    UA_Boolean *relevant_endpoints = UA_alloca(sizeof(UA_Byte) * server->endpointDescriptionsSize);
+    //UA_Boolean *relevant_endpoints = UA_alloca(sizeof(UA_Byte) * server->endpointDescriptionsSize);/*endpoint patch*/
+    UA_Boolean *relevant_endpoints = UA_alloca(sizeof(UA_Byte) * server->endpointDescriptionsSize); /*endpoint patch*/
 #endif
     size_t relevant_count = 0;
-    for(size_t j = 0; j < server->endpointDescriptionsSize; j++) {
+    //for(size_t j = 0; j < server->endpointDescriptionsSize; j++) {
+    for(size_t j = 0; j < server->endpointDescriptionsSize; j++) { /*endpoint patch*/
         relevant_endpoints[j] = false;
         if(request->profileUrisSize == 0) {
             relevant_endpoints[j] = true;
@@ -72,7 +74,8 @@ void Service_GetEndpoints(UA_Server *server, UA_Session *session, const UA_GetEn
             continue;
         }
         for(size_t i = 0; i < request->profileUrisSize; i++) {
-            if(UA_String_equal(&request->profileUris[i], &server->endpointDescriptions->transportProfileUri)) {
+            if(UA_String_equal(&request->profileUris[i], &server->endpointDescriptions[j].transportProfileUri)) {
+            //if(UA_String_equal(&request->profileUris[i], &server->endpoints[j].endpointDescription.transportProfileUri)) {/*endpoint patch*/
                 relevant_endpoints[j] = true;
                 relevant_count++;
                 break;
@@ -93,16 +96,18 @@ void Service_GetEndpoints(UA_Server *server, UA_Session *session, const UA_GetEn
 
     size_t k = 0;
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
-    for(size_t j = 0; j < server->endpointDescriptionsSize && retval == UA_STATUSCODE_GOOD; j++) {
+    //for(size_t j = 0; j < server->endpointDescriptionsSize && retval == UA_STATUSCODE_GOOD; j++) {
+    for(size_t j=0; j<server->endpointDescriptionsSize && retval == UA_STATUSCODE_GOOD; j++){/*endpoint patch*/
         if(!relevant_endpoints[j])
             continue;
-        retval = UA_EndpointDescription_copy(&server->endpointDescriptions[j], &response->endpoints[k]);
+        //retval = UA_EndpointDescription_copy(&server->endpointDescriptions[j], &response->endpoints[k]);
+        retval = UA_EndpointDescription_copy(&server->endpointDescriptions[j], &response->endpoints[k]);/*endpoint patch*/
         if(retval != UA_STATUSCODE_GOOD)
             break;
         /* replace endpoint's URL to the requested one if provided */
         if(request->endpointUrl.length > 0){
-            UA_String_deleteMembers(&response->endpoints[k].endpointUrl);
-            retval = UA_String_copy(&request->endpointUrl, &response->endpoints[k].endpointUrl);
+            //UA_String_deleteMembers(&response->endpoints[k].endpointUrl);
+            //retval = UA_String_copy(&request->endpointUrl, &response->endpoints[k].endpointUrl);
         }
         k++;
     }

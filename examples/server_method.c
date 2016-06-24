@@ -65,6 +65,7 @@ static void stopHandler(int sign) {
     running = 0;
 }
 
+
 int main(int argc, char** argv) {
     signal(SIGINT, stopHandler); /* catches ctrl-c */
 
@@ -74,9 +75,9 @@ int main(int argc, char** argv) {
     config.networkLayers = &nl;
     config.networkLayersSize = 1;
     UA_Server *server = UA_Server_new(config);
-
     //EXAMPLE 1
     /* add the method node with the callback */
+
     UA_Argument inputArguments;
     UA_Argument_init(&inputArguments);
     inputArguments.arrayDimensionsSize = 0;
@@ -107,6 +108,7 @@ int main(int argc, char** argv) {
                             UA_QUALIFIEDNAME(1, "hello world"), 
                             helloAttr, &helloWorldMethod, NULL,
                             1, &inputArguments, 1, &outputArguments, NULL);
+
 
     //END OF EXAMPLE 1
 

@@ -682,6 +682,16 @@ UA_CallMethodResult UA_EXPORT
 UA_Server_call(UA_Server *server, const UA_CallMethodRequest *request);
 #endif
 
+/**
+ * add Endpoint
+ */
+UA_StatusCode UA_Server_addEndpoint(UA_Server *server,UA_EndpointDescription* endpoint);
+/**
+ * Endpoint Namespace binding
+ */
+
+UA_StatusCode UA_Server_bindNamespaceToEndpoint(UA_Server *server, UA_UInt16 nsIndex, UA_String *endpointUrl);
+
 #ifdef __cplusplus
 }
 #endif

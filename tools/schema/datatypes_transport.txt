@@ -9,3 +9,4 @@ SymmetricAlgorithmSecurityHeader
 SequenceHeader
 SecureConversationMessageFooter
 SecureConversationMessageAbortBody
+EndpointMapping

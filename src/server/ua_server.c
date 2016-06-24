@@ -43,6 +43,76 @@ static const UA_NodeId nodeIdNonHierarchicalReferences = {
         .namespaceIndex = 0, .identifierType = UA_NODEIDTYPE_NUMERIC,
         .identifier.numeric = UA_NS0ID_NONHIERARCHICALREFERENCES};
 #endif
+/*
+ * Endpoint handling
+ */
+UA_StatusCode UA_Server_bindNamespaceToEndpoint(UA_Server *server, UA_UInt16 nsIndex, UA_String *endpointUrl){
+    for(size_t i=0;i<server->endpointDescriptionsSize;i++){
+        if(UA_String_equal(&server->endpointDescriptions[i].endpointUrl, endpointUrl)){
+            /*check if nsIndex is already bound to endpoint */
+            for(size_t j=0; j<server->mappings[i].accessibleNamespacesSize;j++){
+                if(server->mappings[i].accessibleNamespaces[j]==nsIndex){
+                    return UA_STATUSCODE_GOOD; //already bound
+                }
+            }
+            server->mappings[i].accessibleNamespaces = UA_realloc(server->mappings[i].accessibleNamespaces,(server->mappings[i].accessibleNamespacesSize+1)*sizeof(UA_UInt16));
+            if(server->mappings[i].accessibleNamespaces==NULL)
+                return UA_STATUSCODE_BADOUTOFMEMORY;
+            server->mappings[i].accessibleNamespacesSize++;
+            server->mappings[i].accessibleNamespaces[server->mappings[i].accessibleNamespacesSize-1]=nsIndex;
+            return UA_STATUSCODE_GOOD;
+        }
+    }
+    return UA_STATUSCODE_BADNOTFOUND;
+}
+
+UA_StatusCode UA_Server_addEndpoint(UA_Server *server, UA_EndpointDescription* endpoint){
+
+    for(size_t i=0;i<server->endpointDescriptionsSize;i++){
+        if(UA_String_equal(&server->endpointDescriptions[i].endpointUrl,&endpoint->endpointUrl))
+            return UA_STATUSCODE_GOOD;
+    }
+    server->endpointDescriptions = UA_realloc(server->endpointDescriptions,(server->endpointDescriptionsSize+1)*sizeof(UA_EndpointDescription));
+    UA_EndpointDescription_init(&server->endpointDescriptions[server->endpointDescriptionsSize]);
+    if(server->endpointDescriptions==NULL)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+
+    server->mappings = UA_realloc(server->mappings,(server->mappingsSize+1)*sizeof(UA_EndpointMapping));
+    server->mappings[server->mappingsSize].accessibleNamespacesSize = 0;
+    server->mappings[server->mappingsSize].accessibleNamespaces = NULL;
+    server->mappingsSize++;
+
+    UA_copy(endpoint,&server->endpointDescriptions[server->endpointDescriptionsSize],&UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
+    UA_EndpointDescription *ep = &server->endpointDescriptions[server->endpointDescriptionsSize];
+    server->endpointDescriptionsSize++;
+    size_t policies = 0;
+     if(server->config.enableAnonymousLogin)
+         policies++;
+     if(server->config.enableUsernamePasswordLogin)
+         policies++;
+     ep->userIdentityTokensSize = policies;
+     ep->userIdentityTokens = UA_Array_new(policies, &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
+
+     size_t currentIndex = 0;
+     if(server->config.enableAnonymousLogin) {
+         UA_UserTokenPolicy_init(&ep->userIdentityTokens[currentIndex]);
+         ep->userIdentityTokens[currentIndex].tokenType = UA_USERTOKENTYPE_ANONYMOUS;
+         ep->userIdentityTokens[currentIndex].policyId = UA_STRING_ALLOC(ANONYMOUS_POLICY);
+         currentIndex++;
+     }
+     if(server->config.enableUsernamePasswordLogin) {
+         UA_UserTokenPolicy_init(&ep->userIdentityTokens[currentIndex]);
+         ep->userIdentityTokens[currentIndex].tokenType = UA_USERTOKENTYPE_USERNAME;
+         ep->userIdentityTokens[currentIndex].policyId = UA_STRING_ALLOC(USERNAME_POLICY);
+     }
+
+     /* The standard says "the HostName specified in the Server Certificate is the
+        same as the HostName contained in the endpointUrl provided in the
+        EndpointDescription */
+     UA_String_copy(&server->config.serverCertificate, &endpoint->serverCertificate);
+    return UA_STATUSCODE_GOOD;
+
+}
 
 /**********************/
 /* Namespace Handling */
@@ -61,6 +131,7 @@ static UA_UInt16 addNamespaceInternal(UA_Server *server, const UA_String *name) 
     server->namespacesSize++;
     return (UA_UInt16)(server->namespacesSize - 1);
 }
+
 
 UA_UInt16 UA_Server_addNamespace(UA_Server *server, const char* name) {
     UA_String nameString = UA_STRING_ALLOC(name);
@@ -253,8 +324,13 @@ void UA_Server_delete(UA_Server *server) {
     UA_Server_deleteExternalNamespaces(server);
 #endif
     UA_Array_delete(server->namespaces, server->namespacesSize, &UA_TYPES[UA_TYPES_STRING]);
-    UA_Array_delete(server->endpointDescriptions, server->endpointDescriptionsSize,
-                    &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
+    //UA_Array_delete(server->endpoints,server->endpointsSize, &UA_TRANSPORT[UA_TRANSPORT_ENDPOINT]);
+    UA_Array_delete(server->endpointDescriptions, server->endpointDescriptionsSize, /*endpoint patch*/
+                     &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
+    for(size_t i=0;i<server->mappingsSize;i++){
+    	UA_Array_delete(server->mappings[i].accessibleNamespaces,server->mappings[i].accessibleNamespacesSize,&UA_TYPES[UA_TYPES_UINT16]);
+    }
+    UA_Array_delete(server->mappings,server->mappingsSize,&UA_TRANSPORT[UA_TRANSPORT_ENDPOINTMAPPING]);
 
 #ifdef UA_ENABLE_MULTITHREADING
     pthread_cond_destroy(&server->dispatchQueue_condition);
@@ -464,11 +540,30 @@ UA_Server * UA_Server_new(const UA_ServerConfig config) {
     UA_String_copy(&server->config.applicationDescription.applicationUri, &server->namespaces[1]);
     server->namespacesSize = 2;
 
-    server->endpointDescriptions = UA_Array_new(server->config.networkLayersSize,
+    //server->endpointDescriptions = UA_Array_new(server->config.networkLayersSize,
+    //                                            &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
+
+    /* setting up the server for 3 components */
+    size_t endpointSize = 1;
+    server->endpointDescriptions = UA_Array_new(endpointSize,
                                                 &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
-    server->endpointDescriptionsSize = server->config.networkLayersSize;
-    for(size_t i = 0; i < server->config.networkLayersSize; i++) {
-        UA_EndpointDescription *endpoint = &server->endpointDescriptions[i];
+    server->endpointDescriptionsSize = endpointSize;
+    server->mappings = UA_malloc(sizeof(UA_EndpointMapping));
+    server->mappingsSize = 1;
+    server->mappings->accessibleNamespaces = NULL;
+    server->mappings->accessibleNamespacesSize = 0;
+    //server->endpoints = UA_Array_new(endpointSize,&UA_TRANSPORT[UA_TRANSPORT_ENDPOINT]);/*endpoint patch*/
+    //server->endpointsSize = endpointSize;
+
+    //server->endpointDescriptionsSize = server->config.networkLayersSize;
+    //for(size_t i = 0; i < server->config.networkLayersSize; i++) {
+    for(size_t i = 0; i < endpointSize; i++) {
+        //UA_EndpointDescription *endpoint = &server->endpointDescriptions[i];
+        UA_EndpointDescription *endpoint = &server->endpointDescriptions[i];/*endpoint patch*/
+
+        endpoint->server.applicationName = UA_LOCALIZEDTEXT_ALLOC("en","omg");
+        endpoint->server.applicationUri = UA_STRING_ALLOC("abc");
+
         endpoint->securityMode = UA_MESSAGESECURITYMODE_NONE;
         endpoint->securityPolicyUri =
             UA_STRING_ALLOC("http://opcfoundation.org/UA/SecurityPolicy#None");
@@ -500,7 +595,7 @@ UA_Server * UA_Server_new(const UA_ServerConfig config) {
            same as the HostName contained in the endpointUrl provided in the
            EndpointDescription */
         UA_String_copy(&server->config.serverCertificate, &endpoint->serverCertificate);
-        UA_ApplicationDescription_copy(&server->config.applicationDescription, &endpoint->server);
+        //UA_ApplicationDescription_copy(&server->config.applicationDescription, &endpoint->server);
 
         /* copy the discovery url only once the networlayer has been started */
         // UA_String_copy(&server->config.networkLayers[i].discoveryUrl, &endpoint->endpointUrl);

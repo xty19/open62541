@@ -9,16 +9,44 @@ void Service_CreateSession(UA_Server *server, UA_SecureChannel *channel,
         response->responseHeader.serviceResult = UA_STATUSCODE_BADSECURECHANNELIDINVALID;
         return;
     }
+
     response->responseHeader.serviceResult =
         UA_Array_copy(server->endpointDescriptions, server->endpointDescriptionsSize,
-                      (void**)&response->serverEndpoints, &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
+                      (void**)&response->serverEndpoints, &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);  /*endpoint patch */
+    //response->serverEndpoints = UA_malloc(server->endpointDescriptionsSize*sizeof(UA_EndpointDescription));
+    if(response->serverEndpoints==NULL){
+    	response->responseHeader.serviceResult = UA_STATUSCODE_BADOUTOFMEMORY;
+    	return;
+    }
+    for(size_t i; i<server->endpointDescriptionsSize;i++){
+    	response->serverEndpoints[i] = server->endpointDescriptions[i];
+    }
+    response->responseHeader.serviceResult = UA_STATUSCODE_GOOD;
+
+
+
+
     if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD)
         return;
-    response->serverEndpointsSize = server->endpointDescriptionsSize;
+    //response->serverEndpointsSize = server->endpointDescriptionsSize;
+    response->serverEndpointsSize = server->endpointDescriptionsSize; /*endpoint patch*/
 
     UA_Session *newSession;
-    response->responseHeader.serviceResult =
-        UA_SessionManager_createSession(&server->sessionManager, channel, request, &newSession);
+    size_t endpointIndex = 0;
+    for(size_t i=0;i<server->endpointDescriptionsSize;i++){
+        if(UA_String_equal(&server->endpointDescriptions[i].endpointUrl,&request->endpointUrl)){
+            endpointIndex = i;
+            break;
+        }
+        if(server->endpointDescriptionsSize-1==i){
+            response->responseHeader.serviceResult = UA_STATUSCODE_BADTCPENDPOINTURLINVALID;
+            return;
+        }
+    }
+    UA_SessionManager_createSession(&server->sessionManager, channel, request, &newSession);
+    //bind endpoint to session;
+    newSession->endpointIndex = endpointIndex;
+
     if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
         UA_LOG_DEBUG_CHANNEL(server->config.logger, channel, "Processing CreateSessionRequest failed");
         return;
@@ -30,9 +58,22 @@ void Service_CreateSession(UA_Server *server, UA_SecureChannel *channel,
     response->revisedSessionTimeout = (UA_Double)newSession->timeout;
     response->authenticationToken = newSession->authenticationToken;
     response->responseHeader.serviceResult = UA_String_copy(&request->sessionName, &newSession->sessionName);
-    if(server->endpointDescriptionsSize > 0)
-        response->responseHeader.serviceResult |= UA_ByteString_copy(&server->endpointDescriptions->serverCertificate,
-                               &response->serverCertificate);
+    //if(server->endpointDescriptionsSize > 0)
+    if(server->endpointDescriptionsSize >0) /* endpoint patch */
+        for(size_t i; i<server->endpointDescriptionsSize;i++){
+        	if(UA_String_equal(&request->endpointUrl,&server->endpointDescriptions[i].endpointUrl)){
+                response->responseHeader.serviceResult |= UA_ByteString_copy(&server->endpointDescriptions[i].serverCertificate,
+                                       &response->serverCertificate);
+                break;
+        	}
+        	if(i==server->endpointDescriptionsSize-1){
+        		response->responseHeader.serviceResult |=UA_STATUSCODE_BADNOTFOUND;
+        	}
+        }
+
+        /*response->responseHeader.serviceResult |= UA_ByteString_copy(&server->endpointDescriptions->serverCertificate,
+                               &response->serverCertificate); */
+
     if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
         UA_SessionManager_removeSession(&server->sessionManager, &newSession->authenticationToken);
          return;
