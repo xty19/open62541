@@ -899,7 +899,7 @@ START_TEST(WriteSingleAttributeDataType) {
     wValue.value.hasValue = true;
     UA_Variant_setScalar(&wValue.value.value, &typeId, &UA_TYPES[UA_TYPES_NODEID]);
     UA_StatusCode retval = Service_Write_single(server, &adminSession, &wValue);
-    ck_assert_int_eq(retval, UA_STATUSCODE_BADWRITENOTSUPPORTED);
+    ck_assert_int_eq(retval, UA_STATUSCODE_BADTYPEMISMATCH);
     UA_Server_delete(server);
 } END_TEST
 
@@ -914,7 +914,7 @@ START_TEST(WriteSingleAttributeValueRank) {
     wValue.value.hasValue = true;
     UA_StatusCode retval = Service_Write_single(server, &adminSession, &wValue);
     // Returns attributeInvalid, since variant/value may be writable
-    ck_assert_int_eq(retval, UA_STATUSCODE_BADATTRIBUTEIDINVALID);
+    ck_assert_int_eq(retval, UA_STATUSCODE_GOOD);
     UA_Server_delete(server);
 } END_TEST
 

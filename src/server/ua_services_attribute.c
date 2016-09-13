@@ -503,6 +503,7 @@ UA_Variant_matchVariableDefinition(UA_Server *server, const UA_NodeId *variableD
     case -1: /* the value is a scalar */
         if(!UA_Variant_isScalar(value))
             return UA_STATUSCODE_BADTYPEMISMATCH;
+        break;
     case 0: /* the value is an array with one or more dimensions */
         if(UA_Variant_isScalar(value))
             return UA_STATUSCODE_BADTYPEMISMATCH;
@@ -545,14 +546,11 @@ UA_VariableNode_setDataType(UA_Server *server, UA_VariableNode *node,
         return UA_STATUSCODE_BADTYPEMISMATCH;
 
     /* Does the new type match the constraints of the variabletype? */
-    const UA_NodeId *vtDataType = &vt->dataType;
     UA_NodeId subtypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
     UA_Boolean found = false;
     UA_StatusCode retval = isNodeInTree(server->nodestore, dataType,
-                                        vtDataType, &subtypeId, 1, &found);
-    if(retval != UA_STATUSCODE_GOOD)
-        return retval;
-    if(!found)
+                                        &vt->dataType, &subtypeId, 1, &found);
+    if(retval != UA_STATUSCODE_GOOD || !found)
         return UA_STATUSCODE_BADTYPEMISMATCH;
 
     /* Check if the current value would match the new type */
@@ -641,12 +639,14 @@ UA_VariableNode_setArrayDimensions(UA_Server *server, UA_VariableNode *node,
             return UA_STATUSCODE_BADTYPEMISMATCH;
         break;
     case 0: /* the value is an array with one or more dimensions */
-        if(arrayDimensionsSize == 0)
-            return UA_STATUSCODE_BADTYPEMISMATCH;
+        /* no arraydimensions => array of dimension 1 */
         break;
     default: /* >= 1: the value is an array with the specified number of dimensions */
         if(node->valueRank < 0)
             return UA_STATUSCODE_BADTYPEMISMATCH;
+        if(arrayDimensionsSize == 0 && node->valueRank == 1)
+            /* no arraydimensions => array of dimension 1 */
+            break;
         if(arrayDimensionsSize != (size_t)node->valueRank)
             return UA_STATUSCODE_BADTYPEMISMATCH;
     }
@@ -803,7 +803,7 @@ CopyAttributeIntoNode(UA_Server *server, UA_Session *session,
     switch(wvalue->attributeId) {
     case UA_ATTRIBUTEID_NODEID:
     case UA_ATTRIBUTEID_NODECLASS:
-        retval = UA_STATUSCODE_BADNOTWRITABLE;
+        retval = UA_STATUSCODE_BADWRITENOTSUPPORTED;
         break;
     case UA_ATTRIBUTEID_BROWSENAME:
         CHECK_DATATYPE(QUALIFIEDNAME);
