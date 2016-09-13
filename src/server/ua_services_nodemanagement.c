@@ -547,11 +547,11 @@ dataTypeNodeFromAttributes(UA_DataTypeNode *dtnode, const UA_DataTypeAttributes 
     return UA_STATUSCODE_GOOD;
 }
 
-#define CHECK_ATTRIBUTES(TYPE) do {                                     \
-        if(item->nodeAttributes.content.decoded.type != &UA_TYPES[UA_TYPES_##TYPE]) { \
-            result->statusCode = UA_STATUSCODE_BADNODEATTRIBUTESINVALID; \
-            break;                                                      \
-        } }while(false)
+#define CHECK_ATTRIBUTES(TYPE)                                          \
+    if(item->nodeAttributes.content.decoded.type != &UA_TYPES[UA_TYPES_##TYPE]) { \
+        result->statusCode = UA_STATUSCODE_BADNODEATTRIBUTESINVALID;    \
+        break;                                                          \
+    }
 
 static void
 Service_AddNodes_single(UA_Server *server, UA_Session *session,
@@ -570,42 +570,37 @@ Service_AddNodes_single(UA_Server *server, UA_Session *session,
         result->statusCode = UA_STATUSCODE_BADOUTOFMEMORY;
         return;
     }
-    result->statusCode = copyStandardAttributes(node, item, item->nodeAttributes.content.decoded.data);
+
+    void *data = item->nodeAttributes.content.decoded.data;
+    result->statusCode = copyStandardAttributes(node, item, data);
     switch(item->nodeClass) {
     case UA_NODECLASS_OBJECT:
         CHECK_ATTRIBUTES(OBJECTATTRIBUTES);
-        result->statusCode |= objectNodeFromAttributes((UA_ObjectNode*)node,
-                                                       item->nodeAttributes.content.decoded.data);
+        result->statusCode |= objectNodeFromAttributes((UA_ObjectNode*)node, data);
         break;
     case UA_NODECLASS_VARIABLE:
         CHECK_ATTRIBUTES(VARIABLEATTRIBUTES);
-        result->statusCode |= variableNodeFromAttributes(server, (UA_VariableNode*)node,
-                                                         item->nodeAttributes.content.decoded.data);
+        result->statusCode |= variableNodeFromAttributes(server, (UA_VariableNode*)node, data);
         break;
     case UA_NODECLASS_OBJECTTYPE:
         CHECK_ATTRIBUTES(OBJECTTYPEATTRIBUTES);
-        result->statusCode |= objectTypeNodeFromAttributes((UA_ObjectTypeNode*)node,
-                                                           item->nodeAttributes.content.decoded.data);
+        result->statusCode |= objectTypeNodeFromAttributes((UA_ObjectTypeNode*)node, data);
         break;
     case UA_NODECLASS_VARIABLETYPE:
         CHECK_ATTRIBUTES(VARIABLETYPEATTRIBUTES);
-        result->statusCode |= variableTypeNodeFromAttributes(server, (UA_VariableTypeNode*)node,
-                                                             item->nodeAttributes.content.decoded.data);
+        result->statusCode |= variableTypeNodeFromAttributes(server, (UA_VariableTypeNode*)node, data);
         break;
     case UA_NODECLASS_REFERENCETYPE:
         CHECK_ATTRIBUTES(REFERENCETYPEATTRIBUTES);
-        result->statusCode |= referenceTypeNodeFromAttributes((UA_ReferenceTypeNode*)node,
-                                                              item->nodeAttributes.content.decoded.data);
+        result->statusCode |= referenceTypeNodeFromAttributes((UA_ReferenceTypeNode*)node, data);
         break;
     case UA_NODECLASS_DATATYPE:
         CHECK_ATTRIBUTES(DATATYPEATTRIBUTES);
-        result->statusCode |= dataTypeNodeFromAttributes((UA_DataTypeNode*)node,
-                                                         item->nodeAttributes.content.decoded.data);
+        result->statusCode |= dataTypeNodeFromAttributes((UA_DataTypeNode*)node, data);
         break;
     case UA_NODECLASS_VIEW:
         CHECK_ATTRIBUTES(VIEWATTRIBUTES);
-        result->statusCode |= viewNodeFromAttributes((UA_ViewNode*)node,
-                                                     item->nodeAttributes.content.decoded.data);
+        result->statusCode |= viewNodeFromAttributes((UA_ViewNode*)node, data);
         break;
     case UA_NODECLASS_METHOD:
     case UA_NODECLASS_UNSPECIFIED:
@@ -1092,7 +1087,8 @@ Service_DeleteNodes_single(UA_Server *server, UA_Session *session,
 void Service_DeleteNodes(UA_Server *server, UA_Session *session,
                          const UA_DeleteNodesRequest *request,
                          UA_DeleteNodesResponse *response) {
-    UA_LOG_DEBUG_SESSION(server->config.logger, session, "Processing DeleteNodesRequest");
+    UA_LOG_DEBUG_SESSION(server->config.logger, session,
+                         "Processing DeleteNodesRequest");
     if(request->nodesToDeleteSize == 0) {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADNOTHINGTODO;
         return;
@@ -1177,7 +1173,8 @@ void
 Service_DeleteReferences(UA_Server *server, UA_Session *session,
                          const UA_DeleteReferencesRequest *request,
                          UA_DeleteReferencesResponse *response) {
-    UA_LOG_DEBUG_SESSION(server->config.logger, session, "Processing DeleteReferencesRequest");
+    UA_LOG_DEBUG_SESSION(server->config.logger, session,
+                         "Processing DeleteReferencesRequest");
     if(request->referencesToDeleteSize <= 0) {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADNOTHINGTODO;
         return;
