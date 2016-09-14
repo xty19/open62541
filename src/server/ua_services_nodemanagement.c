@@ -747,23 +747,38 @@ UA_Server_addDataSourceVariableNode(UA_Server *server, const UA_NodeId requested
                                     const UA_QualifiedName browseName, const UA_NodeId typeDefinition,
                                     const UA_VariableAttributes attr, const UA_DataSource dataSource,
                                     UA_NodeId *outNewNodeId) {
-    /* create the new node */
+    /* Create the new node */
     UA_VariableNode *node = UA_NodeStore_newVariableNode();
     if(!node)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
-    /* Copy content */
+    /* Read the current value (to do typechecking) */
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_VariableAttributes editAttr = attr;
+    UA_DataValue value;
+    UA_DataValue_init(&value);
+    if(dataSource.read)
+        retval = dataSource.read(dataSource.handle, requestedNewNodeId,
+                                 false, NULL, &value);
+    else
+        retval = UA_STATUSCODE_BADTYPEMISMATCH;
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    editAttr.value = value.value;
+
+    /* Copy attributes into node */
     UA_AddNodesItem item;
     UA_AddNodesItem_init(&item);
     item.requestedNewNodeId.nodeId = requestedNewNodeId;
     item.browseName = browseName;
     item.typeDefinition.nodeId = typeDefinition;
     item.parentNodeId.nodeId = parentNodeId;
-    UA_StatusCode retval = copyStandardAttributes((UA_Node*)node, &item, (const UA_NodeAttributes*)&attr);
-    retval |= copyCommonVariableAttributes(server, node, &item, &attr);
+    retval |= copyStandardAttributes((UA_Node*)node, &item, (const UA_NodeAttributes*)&editAttr);
+    retval |= copyCommonVariableAttributes(server, node, &item, &editAttr);
+    UA_DataValue_deleteMembers(&node->value.data.value);
     node->valueSource = UA_VALUESOURCE_DATASOURCE;
     node->value.dataSource = dataSource;
-
+    UA_DataValue_deleteMembers(&value);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_NodeStore_deleteNode((UA_Node*)node);
         return retval;
