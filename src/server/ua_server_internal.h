@@ -141,6 +141,12 @@ Service_AddNodes_existing(UA_Server *server, UA_Session *session, UA_Node *node,
                           UA_InstantiationCallback *instantiationCallback,
                           UA_NodeId *addedNodeId);
 
+UA_StatusCode
+Service_AddNodes_existing_noInstantiate(UA_Server *server, UA_Session *session,
+                                        UA_Node *node, const UA_NodeId *parentNodeId,
+                                        const UA_NodeId *referenceTypeId,
+                                        UA_NodeId *addedNodeId);
+
 /*********************/
 /* Utility Functions */
 /*********************/
@@ -169,6 +175,9 @@ UA_Boolean
 isNodeInTree(UA_NodeStore *ns, const UA_NodeId *rootNode,
              const UA_NodeId *nodeToFind, const UA_NodeId *referenceTypeIds,
              size_t referenceTypeIdsSize);
+
+const UA_NodeId *
+getNodeTypeId(const UA_Node *node);
 
 const UA_Node *
 getNodeType(UA_Server *server, const UA_Node *node);

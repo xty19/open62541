@@ -182,38 +182,43 @@ isNodeInTree(UA_NodeStore *ns, const UA_NodeId *leafNode, const UA_NodeId *nodeT
     return false;
 }
 
-const UA_Node *
-getNodeType(UA_Server *server, const UA_Node *node) {
+const UA_NodeId *
+getNodeTypeId(const UA_Node *node) {
     /* The reference to the parent is different for variable and variabletype */ 
-    UA_NodeId parentRef;
+    UA_NodeId typeRef;
     UA_Boolean inverse;
     if(node->nodeClass == UA_NODECLASS_VARIABLE ||
        node->nodeClass == UA_NODECLASS_OBJECT) {
-        parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
+        typeRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
         inverse = false;
     } else if(node->nodeClass == UA_NODECLASS_VARIABLETYPE ||
               /* node->nodeClass == UA_NODECLASS_OBJECTTYPE || // objecttype may have multiple parents */
               node->nodeClass == UA_NODECLASS_REFERENCETYPE ||
               node->nodeClass == UA_NODECLASS_DATATYPE) {
-        parentRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
+        typeRef = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
         inverse = true;
     } else {
         return NULL;
     }
 
     /* stop at the first matching candidate */
-    UA_NodeId *parentId = NULL;
+    const UA_NodeId *typeId = NULL;
     for(size_t i = 0; i < node->referencesSize; i++) {
         if(node->references[i].isInverse == inverse &&
-           UA_NodeId_equal(&node->references[i].referenceTypeId, &parentRef)) {
-            parentId = &node->references[i].targetId.nodeId;
+           UA_NodeId_equal(&node->references[i].referenceTypeId, &typeRef)) {
+            typeId = &node->references[i].targetId.nodeId;
             break;
         }
     }
+    return typeId;
+}
 
-    if(!parentId)
+const UA_Node *
+getNodeType(UA_Server *server, const UA_Node *node) {
+    const UA_NodeId *typeId = getNodeTypeId(node);
+    if(!typeId)
         return NULL;
-    return UA_NodeStore_get(server->nodestore, parentId);
+    return UA_NodeStore_get(server->nodestore, typeId);
 }
 
 const UA_VariableTypeNode *
