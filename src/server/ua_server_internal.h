@@ -166,7 +166,7 @@ getTypeHierarchy(UA_NodeStore *ns, const UA_Node *rootRef, UA_Boolean inverse,
                  UA_NodeId **typeHierarchy, size_t *typeHierarchySize);
 
 UA_Boolean
-isNodeInTree(UA_NodeStore *ns, const UA_NodeId *rootNode,
+isNodeInTree(UA_NodeStore *ns, const UA_NodeId *leafNode,
              const UA_NodeId *nodeToFind, const UA_NodeId *referenceTypeIds,
              size_t referenceTypeIdsSize);
 
@@ -187,22 +187,16 @@ typeCheckValue(UA_Server *server, const UA_NodeId *variableDataTypeId,
                const UA_NumericRange *range, UA_Variant *equivalent);
 
 UA_StatusCode
-writeDataTypeAttribute(UA_Server *server, UA_VariableNode *node,
-                       const UA_NodeId *dataType, const UA_NodeId *constraintDataType);
-
-UA_StatusCode
 compatibleArrayDimensions(size_t constraintArrayDimensionsSize,
                           const UA_UInt32 *constraintArrayDimensions,
                           size_t testArrayDimensionsSize,
                           const UA_UInt32 *testArrayDimensions);
 
 UA_StatusCode
-writeValueRankAttribute(UA_VariableNode *node, UA_Int32 valueRank,
-                        UA_Int32 constraintValueRank);
+compatibleValueRankArrayDimensions(UA_Int32 valueRank, size_t arrayDimensionsSize);
 
 UA_StatusCode
-writeValueAttribute(UA_Server *server, UA_VariableNode *node,
-                    const UA_DataValue *value, const UA_String *indexRange);
+compatibleValueRanks(UA_Int32 valueRank, UA_Int32 constraintValueRank);
 
 /*******************/
 /* Single-Services */
